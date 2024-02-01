@@ -11,6 +11,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait 
+from selenium.webdriver.support import expected_conditions as EC 
 from webdriver_manager.chrome  import ChromeDriverManager
 
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
@@ -34,6 +36,8 @@ class Scraper:
         service = Service(ChromeDriverManager().install())
         options = webdriver.ChromeOptions() 
 
+        
+
         #persistent browser
         options.add_experimental_option("detach", True)
 
@@ -45,16 +49,18 @@ class Scraper:
         options.add_argument('--no-sandbox')
         options.add_argument('--start-maximized')
         options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--blink-settings=imagesEnabled=false')
+
         
 
         self.driver = webdriver.Chrome(service=service, options=options)
         self.driver.set_window_size(3000,1500)
-        self.driver.get(URL)   
+        self.driver.get(URL)
 
+        self.wait = WebDriverWait(self.driver, 10)
         
     def course_search(self):
         try:
-            
         
 
             #Display all courses
@@ -65,8 +71,9 @@ class Scraper:
 
             #Seach for course
             search_box_xpath = "//label//input[@class='form-control input-sm']"
-            search_box = self.driver.find_element(By.XPATH, search_box_xpath)
-            time.sleep(1)
+            # search_box = self.driver.find_element(By.XPATH, search_box_xpath)
+            search_box = self.wait.until(EC.presence_of_element_located((By.XPATH, search_box_xpath)))
+            
             search_box.click()
 
             self.course_code = input("Please enter course code (eg dcit301): ")
@@ -84,6 +91,7 @@ class Scraper:
            print("No internet conection")
 
         except Exception as e:
+
             print(str(e))
 
 
@@ -91,7 +99,9 @@ class Scraper:
         try:
 
             course_xpath = "//table//td//a"
-            exams_details = self.driver.find_element(By.XPATH, course_xpath)
+            exams_details = self.wait.until(EC.presence_of_element_located((By.XPATH, course_xpath)))
+            
+            #self.driver.find_element(By.XPATH, course_xpath)
             exams_details.click()
             print(f"Got {self.course_code} scedule taking screenshot....")
 
@@ -110,7 +120,9 @@ class Scraper:
 
             #take screenshot
             exams_card_xpath = "/html/body/div[1]/div[2]/div"
-            element = self.driver.find_element(By.XPATH, exams_card_xpath)
+            element = self.wait.until(EC.presence_of_element_located((By.XPATH, exams_card_xpath)))
+            
+            #self.driver.find_element(By.XPATH, exams_card_xpath)
             element.screenshot(f"./screenshots/{self.course_code}"+".png")
             print('file saved')
 
@@ -129,8 +141,8 @@ class Scraper:
 
 if __name__ == '__main__':
     scraper = Scraper()
-    scraper.course_search()
-    scraper.get_exams_schedule()
-    scraper.take_screenshot()
+    # scraper.course_search()
+    # scraper.get_exams_schedule()
+    # scraper.take_screenshot()
     scraper.cleanup()
     
