@@ -41,7 +41,7 @@ class Scraper:
         #persistent browser
         options.add_experimental_option("detach", True)
 
-        #options.add_argument('--headless')
+        options.add_argument('--headless')
         options.add_argument('--disable-gpu')
         options.add_argument('--disable-extensions')
         options.add_argument('--disable-pdf-viewer')
@@ -54,19 +54,21 @@ class Scraper:
         
 
         self.driver = webdriver.Chrome(service=service, options=options)
-        # self.driver.set_window_size(3000,1500)
+        self.driver.set_window_size(3000,1500)
         self.driver.get(URL)
 
         self.wait = WebDriverWait(self.driver, 10)
 
-        self.course_code = input("Please enter course code (eg dcit301): ").replace(" ","")
+        
     
     def click_schedule_gen(self):
         try:
             schedule_gen_xpath = "/html/body/header/nav/div/div[2]/ul/li[4]/a"
             schedule_gen = self.wait.until(EC.presence_of_element_located((By.XPATH, schedule_gen_xpath)))
             schedule_gen.click()
-            print("Clicked on schedule generator....")
+            print("Ready to generate schedule....")
+
+            self.course_code = input("Please enter course code (eg dcit301): ").replace(" ","")
 
         except Exception as e:
             print(str(e))
@@ -117,9 +119,10 @@ class Scraper:
     def get_exams_schedule(self):
         try:
             self.get_batch()
-            
+            generate_button_xpath = '//*[@id="sendButton"]'
+            generate_button = self.wait.until(EC.presence_of_element_located((By.XPATH, generate_button_xpath)))
 
-
+            generate_button.click()
 
         except (NoSuchElementException):
             print("Element not found")
@@ -135,18 +138,18 @@ class Scraper:
             time.sleep(1)
 
             #take screenshot
-            exams_card_xpath = "/html/body/div[1]/div[2]/div"
+            exams_card_xpath = '//*[@id="allcontent"]'
             element = self.wait.until(EC.presence_of_element_located((By.XPATH, exams_card_xpath)))
             
             #self.driver.find_element(By.XPATH, exams_card_xpath)
             element.screenshot(f"./screenshots/{self.course_code}"+".png")
-            print('file saved')
+            print('Schedule saved')
+            
 
         except (TimeoutException):
             print("No internet conection")
         except Exception as e:
             print(str(e))
-        
         
 
     def cleanup(self):
@@ -157,9 +160,9 @@ class Scraper:
 
 if __name__ == '__main__':
     scraper = Scraper()
-    scraper.click_schedule_gen()
-    scraper.get_batch()
+    # scraper.click_schedule_gen()
     # scraper.get_exams_schedule()
     # scraper.take_screenshot()
+    scraper.all_courses_schedule()
     scraper.cleanup()
     
