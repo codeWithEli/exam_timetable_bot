@@ -59,6 +59,8 @@ class Scraper:
 
         self.wait = WebDriverWait(self.driver, 10)
 
+        self.unavialable_courses = []
+
         
     
     def click_schedule_gen(self):
@@ -67,8 +69,6 @@ class Scraper:
             schedule_gen = self.wait.until(EC.presence_of_element_located((By.XPATH, schedule_gen_xpath)))
             schedule_gen.click()
             print("Ready to generate schedule....")
-
-            self.course_code = input("Please enter course code (eg dcit301): ").replace(" ","")
 
         except Exception as e:
             print(str(e))
@@ -87,42 +87,88 @@ class Scraper:
             print(str(e))
 
 
-    def get_batch(self):
+    def is_course_available(self, course_code) -> bool:
         try:
-            self.search_course(self.course_code)
+            self.search_course(course_code)
             course_list_xpath = '//*[@class="select2-results__options"]'
             
             course_lists = self.wait.until(EC.presence_of_element_located((By.XPATH, course_list_xpath)))
-            course_batch = course_lists.find_elements(By.TAG_NAME, 'li')
-            self.batch_list = []
-            for batch in course_batch:
-                self.batch_list.append(batch.text)
+            courses = course_lists.find_elements(By.TAG_NAME, 'li')
+
+            for course in courses:
+                if course.text == "No results found":
+                    return False
+                else:
+                    return True
             
-            print(self.batch_list)
-
-            self.search_box.clear()
-
-            for i in self.batch_list:
-                self.search_course(i)
-                self.search_box.send_keys(Keys.RETURN)
-
-
         except (NoSuchElementException):
             print("No such Element")
             
         except (ConnectionError):
-            print("No internet connection")
+            print("Connection Timeout")
            
         except Exception as e:
             print(str(e))
 
-    def get_exams_schedule(self):
+
+
+    def get_batch(self, course_code: str):
         try:
-            self.get_batch()
+            if self.is_course_available(course_code) is True:
+                self.search_course(course_code)
+                course_list_xpath = '//*[@class="select2-results__options"]'
+                
+                course_lists = self.wait.until(EC.presence_of_element_located((By.XPATH, course_list_xpath)))
+                course_batch = course_lists.find_elements(By.TAG_NAME, 'li')
+
+                self.batch_list = []
+
+                for batch in course_batch:
+                    if batch.text != "No results found":
+                        self.batch_list.append(batch.text)
+                    
+                print(f'Found : {self.batch_list}')
+                
+                self.search_box.clear()
+
+                for i in self.batch_list:
+                    self.search_course(i)
+                    self.search_box.send_keys(Keys.RETURN)
+            else:
+                self.unavialable_courses.append(course_code)
+           
+                
+        except (NoSuchElementException):
+            print("No such Element")
+            
+        except (ConnectionError):
+            print("Connection Timeout")
+           
+        except Exception as e:
+            print(str(e))
+
+
+  
+
+    def click_generate(self):
+        try:
             generate_button_xpath = '//*[@id="sendButton"]'
             generate_button = self.wait.until(EC.presence_of_element_located((By.XPATH, generate_button_xpath)))
+            self.driver.execute_script('arguments[0].click();', generate_button)
 
-            generate_button.click()
+        except (NoSuchElementException):
+            print('Element Not Found')
+
+        except Exception as e:
+            print(str(e))
+
+    def single_exams_schedule(self):
+        try:
+            self.click_schedule_gen()
+            self.course_code = input("Please enter course code (eg ugrc110): ").upper().replace(" ","")
+            self.get_batch(self.course_code)
+            self.click_generate()
+            self.take_screenshot(self.course_code)
 
         except (NoSuchElementException):
             print("Element not found")
@@ -130,7 +176,30 @@ class Scraper:
         except Exception as e:
             print(str(e))
 
-    def take_screenshot(self):
+    
+    def all_courses_schedule(self):
+        try:
+            self.click_schedule_gen()
+            self.all_courses = input("Please enter all your course: ").upper().replace(" ", "").split(',')
+            
+            print(f'You said {self.all_courses}')
+
+            for course in self.all_courses:
+                self.get_batch(course)
+            
+
+            self.click_generate()
+            self.take_screenshot("Exams_Schedule")
+            print(f'These are not available on UG Website Yet: {self.unavialable_courses}')
+
+               
+        except (TimeoutException):
+            print("Connection Timeout")
+        except Exception as e:
+            print(str(e))
+    
+    
+    def take_screenshot(self, name: str):
 
         try:
             #scoll to end fo page
@@ -140,9 +209,7 @@ class Scraper:
             #take screenshot
             exams_card_xpath = '//*[@id="allcontent"]'
             element = self.wait.until(EC.presence_of_element_located((By.XPATH, exams_card_xpath)))
-            
-            #self.driver.find_element(By.XPATH, exams_card_xpath)
-            element.screenshot(f"./screenshots/{self.course_code}"+".png")
+            element.screenshot(f"./screenshots/{name}"+".png")
             print('Schedule saved')
             
 
@@ -150,8 +217,8 @@ class Scraper:
             print("No internet conection")
         except Exception as e:
             print(str(e))
-        
-
+    
+    
     def cleanup(self):
         time.sleep(60)
         self.driver.quit()
@@ -160,9 +227,7 @@ class Scraper:
 
 if __name__ == '__main__':
     scraper = Scraper()
-    # scraper.click_schedule_gen()
-    # scraper.get_exams_schedule()
-    # scraper.take_screenshot()
+    # scraper.single_exams_schedule()
     scraper.all_courses_schedule()
     scraper.cleanup()
     
