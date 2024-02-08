@@ -1,2 +1,5 @@
 .env
 screenshots
+src/serviceAccount.json
+src/firebase_config.json
+/home/eli/Documents/xcode/tta/timetableBot/src/__pycache__

@@ -18,6 +18,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 
+from firebase_functions import upload_to_firebase_storage
+
+
 # constants
 dotenv.load_dotenv()
 URL = os.getenv("URL")
@@ -179,8 +182,10 @@ class Scraper:
 
             self.click_generate()
             self.take_screenshot("Exams_Schedule")
-            print(
-                f'These are not available on UG Website Yet: {self.unavialable_courses}')
+
+            if len(self.unavialable_courses) > 0:
+                print(
+                    f'These are not available on UG Website Yet: {self.unavialable_courses}')
 
         except (TimeoutException):
             print("Connection Timeout")
@@ -250,8 +255,14 @@ class Scraper:
             exams_card_xpath = '//*[@id="allcontent"]'
             element = self.wait.until(
                 EC.presence_of_element_located((By.XPATH, exams_card_xpath)))
-            element.screenshot(f"./screenshots/{name}"+".png")
+
+            screenshot_path = f"./{name}"+".png"
+            element.screenshot(f"./{name}"+".png")
+
+            image_url = upload_to_firebase_storage(screenshot_path, name)
             print('Schedule saved')
+
+            return image_url
 
         except (TimeoutException):
             print("TimeOut!!")
@@ -259,12 +270,11 @@ class Scraper:
             print(str(e))
 
     def cleanup(self):
-        time.sleep(60)
         self.driver.quit()
 
 
 if __name__ == '__main__':
     scraper = Scraper()
-    scraper.single_exams_schedule()
-    # scraper.all_courses_schedule()
+    # scraper.single_exams_schedule()
+    scraper.all_courses_schedule()
     scraper.cleanup()
