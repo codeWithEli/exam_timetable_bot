@@ -1,11 +1,18 @@
 """ firebase helper functions"""
-import os
+import logging
 
 
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import storage
 
+# log config
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
 
 cred = credentials.Certificate('src/serviceAccount.json')
 firebase_admin.initialize_app(
@@ -25,10 +32,10 @@ def upload_to_firebase_storage(local_file_path: str, remote_file_name: str) -> s
         blob = bucket.blob(f"screenshots/{remote_file_name}")
         blob.upload_from_filename(local_file_path)
 
-        print("Screenshot uploaded to firebase!")
+        logger.info("Screenshot uploaded to firebase!")
 
         # delete local copy
-        os.remove(local_file_path)
+        # os.remove(local_file_path)
 
         # return public url
         blob.make_public()
@@ -37,4 +44,4 @@ def upload_to_firebase_storage(local_file_path: str, remote_file_name: str) -> s
         return public_url
 
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
