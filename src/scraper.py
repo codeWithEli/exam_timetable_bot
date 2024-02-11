@@ -85,13 +85,13 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def validate_course_code(self, course_code):
+    # def validate_course_code(self, course_code):
 
-        pattern = r'^[A-Za-z]{4}\d{3}$'
+    #     pattern = r'^[A-Za-z]{4}\d{3}$'
 
-        if not re.match(pattern, course_code):
-            raise ValueError(
-                f"Invalid course code: {course_code}. Expected format is 4 alphabets followed by 3 numbers")
+    #     if not re.match(pattern, course_code):
+    #         raise ValueError(
+    #             f"Invalid course code: {course_code}. Expected format is 4 alphabets followed by 3 numbers")
 
     def is_course_available(self, course_code) -> bool:
         try:
@@ -164,15 +164,15 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def single_exams_schedule(self):
+    def single_exams_schedule(self, course_code):
         try:
 
             self.click_schedule_gen()
-            self.course_code = input(
-                "Please enter course code (eg ugrc110): ").upper().replace(" ", "")
-            self.get_batch(self.course_code)
+            # self.course_code = input(
+            #     "Please enter course code (eg ugrc110): ").upper().replace(" ", "")
+            self.get_batch(course_code)
             self.click_generate()
-            self.take_screenshot(self.course_code)
+            return self.take_screenshot(course_code)
 
         except (NoSuchElementException):
             logger.error("single exams schedulelement not found")
@@ -180,29 +180,48 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def find_exact_exams_venue(self, ID: int):
+    # def find_exact_exams_venue(self, course_code, ID: int):
 
+    #     try:
+    #         self.click_schedule_gen()
+    #         # self.course_code = input(
+    #         #     "Please enter course code (eg ugrc110): ").upper().replace(" ", "")
+    #         self.get_batch(course_code)
+    #         self.click_generate()
+
+    #         return self.find_id(ID), self.take_screenshot(course_code)
+
+    #     except (NoSuchElementException):
+    #         logger.error("exact_exams_venue element not found")
+
+    #     except Exception as e:
+    #         logger.error(str(e))
+
+    def find_exact_exams_venue(self, course_code, ID: int):
         try:
             self.click_schedule_gen()
-            self.course_code = input(
-                "Please enter course code (eg ugrc110): ").upper().replace(" ", "")
-            self.get_batch(self.course_code)
+            self.get_batch(course_code)
             self.click_generate()
-            self.find_id(ID)
-            self.take_screenshot(self.course_code)
+
+            try:
+                return self.find_id(ID), self.take_screenshot(course_code)
+            except ValueError as e:
+                logger.error(str(e))
+                return str(e), self.take_screenshot(course_code)
 
         except (NoSuchElementException):
             logger.error("exact_exams_venue element not found")
-
+            return None, None
         except Exception as e:
             logger.error(str(e))
+            return None, None
 
-    def all_courses_schedule(self):
+    def all_courses_schedule(self, all_courses):
         try:
-            all_courses = input(
-                "Please enter all your course: ").upper().replace(" ", "").split(',')
-            for course in all_courses:
-                self.validate_course_code(course)
+            # all_courses = input(
+            #     "Please enter all your course: ").upper().replace(" ", "").split(',')
+            # for course in all_courses:
+            #     self.validate_course_code(course)
             try:
 
                 self.click_schedule_gen()
@@ -221,10 +240,10 @@ class Scraper:
                     self.get_batch(found_courses)
 
                 self.click_generate()
-                self.take_screenshot("Exams_Schedule")
-
                 logger.info(
                     f'Not available on UG timetable website Yet: {self.unavailable_courses}')
+
+                return self.take_screenshot("Exams_Schedule")
 
             except (NoSuchElementException):
                 logger.error("all_course_schedule element NOT FOUND")
@@ -236,7 +255,6 @@ class Scraper:
             logger.error(str(e))
 
     def find_id(self, ID: int):
-
         try:
             no_id_venues = []
             rows = self.wait.until(
@@ -246,23 +264,20 @@ class Scraper:
                 cols = row.find_elements(By.TAG_NAME, "td")
 
                 if len(cols) > 0:
-                    e_course = cols[0]
-                    e_date = cols[1]
-                    e_time = cols[2]
+                    # e_course = cols[0]
+                    # e_date = cols[1]
+                    # e_time = cols[2]
                     e_venues = cols[3].find_elements(By.TAG_NAME, "li")
 
                     if len(e_venues) == 1:
                         exam_venue = e_venues[0].text.split("|")[0]
                         logger.info(
                             f"""
-                                    Course Batch : {e_course.text}
-                                    Date : {e_date.text}
-                                    Time : {e_time.text}    
-                                    Venue : {exam_venue} 
+                               
+                            Venue : {exam_venue} 
+                            """)
 
-                                    """)
-
-                        return {e_course.text}, {e_date.text}, {e_time.text}, {exam_venue}
+                        return exam_venue
 
                     else:
                         for venue in e_venues:
@@ -280,27 +295,26 @@ class Scraper:
                                     exam_venue = venue.text.split("|")[0]
                                     logger.info(
                                         f"""
-                                        Course Batch : {e_course.text}
-                                        Date : {e_date.text}
-                                        Time : {e_time.text}    
+                                         
                                         Venue : {exam_venue} 
-
                                         """)
-                                    return {e_course.text}, {e_date.text}, {e_time.text}, {exam_venue}
+                                    return exam_venue
 
             if len(no_id_venues) > 0:
                 logger.info(
-                    f"Exact venue NOT FOUND. Posible venue ==> {no_id_venues}")
-                return "ID NOT FOUND", no_id_venues
+                    f"Exact venue NOT FOUND. Possible venue ==> {no_id_venues}")
+                return no_id_venues
             else:
                 logger.info(
                     f"Exact venue NOT FOUND")
-                return "ID NOT FOUND"
+                return None
 
         except (NoSuchElementException):
-            print("No such element")
+            logger.error("No such element")
+            return None, None, None, None
         except Exception as e:
-            print(str(e))
+            logger.error(str(e))
+            return None, None, None, None
 
     def take_screenshot(self, name: str):
 
@@ -334,6 +348,6 @@ class Scraper:
 if __name__ == '__main__':
     scraper = Scraper()
     # scraper.single_exams_schedule()
-    # scraper.find_exact_exams_venue(11358985)
-    scraper.all_courses_schedule()
+    scraper.find_exact_exams_venue("ugbs303", 11357857)
+    # scraper.all_courses_schedule()
     scraper.cleanup()
