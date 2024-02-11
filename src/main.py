@@ -135,10 +135,10 @@ def main():
     app.add_handler(CallbackQueryHandler(button))
 
     app.add_handler(MessageHandler(filters.TEXT & (
-        ~filters.COMMAND), handle_id))
-
-    app.add_handler(MessageHandler(filters.TEXT & (
         ~filters.COMMAND), handle_course_code))
+    
+    app.add_handler(MessageHandler(filters.TEXT & (
+        ~filters.COMMAND), handle_id))
 
     # pollling
     app.run_polling()
