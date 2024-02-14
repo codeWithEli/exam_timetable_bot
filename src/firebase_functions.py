@@ -1,6 +1,6 @@
 """ firebase helper functions"""
 import logging
-
+import os
 
 import firebase_admin
 from firebase_admin import credentials
@@ -35,7 +35,7 @@ def upload_to_firebase_storage(local_file_path: str, remote_file_name: str) -> s
         logger.info("Screenshot uploaded to firebase!")
 
         # delete local copy
-        # os.remove(local_file_path)
+        os.remove(local_file_path)
 
         # return public url
         blob.make_public()

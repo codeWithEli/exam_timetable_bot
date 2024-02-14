@@ -5,6 +5,8 @@ import re
 import logging
 import dotenv
 
+from datetime import datetime
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -136,9 +138,15 @@ class Scraper:
 
             self.search_box.clear()
 
-            for course_found in self.batch_list:
-                self.search_course(course_found)
-                self.search_box.send_keys(Keys.RETURN)
+            if self.batch_list[0] != "No results found":
+                logger.info(f"Searching for {self.batch_list}")
+                for course_found in self.batch_list:
+                    self.search_course(course_found)
+                    self.search_box.send_keys(Keys.RETURN)
+                    return -1
+            else:
+                logger.info("Course not found")
+                return None
 
         except (NoSuchElementException):
             logger.error("get_batch element not found")
@@ -167,8 +175,6 @@ class Scraper:
         try:
 
             self.click_schedule_gen()
-            # self.course_code = input(
-            #     "Please enter course code (eg ugrc110): ").upper().replace(" ", "")
             self.get_batch(course_code)
             self.click_generate()
             return self.take_screenshot(course_code)
@@ -179,34 +185,18 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    # def find_exact_exams_venue(self, course_code, ID: int):
-
-    #     try:
-    #         self.click_schedule_gen()
-    #         # self.course_code = input(
-    #         #     "Please enter course code (eg ugrc110): ").upper().replace(" ", "")
-    #         self.get_batch(course_code)
-    #         self.click_generate()
-
-    #         return self.find_id(ID), self.take_screenshot(course_code)
-
-    #     except (NoSuchElementException):
-    #         logger.error("exact_exams_venue element not found")
-
-    #     except Exception as e:
-    #         logger.error(str(e))
-
     def find_exact_exams_venue(self, course_code, ID: int):
         try:
             self.click_schedule_gen()
             self.get_batch(course_code)
             self.click_generate()
+            return self.find_id(ID), self.take_screenshot(course_code)
 
-            try:
-                return self.find_id(ID), self.take_screenshot(course_code)
-            except ValueError as e:
-                logger.error(str(e))
-                return str(e), self.take_screenshot(course_code)
+            # try:
+            #     return self.find_id(ID), self.take_screenshot(course_code)
+            # except ValueError as e:
+            #     logger.error(str(e))
+            #     return str(e), self.take_screenshot(course_code)
 
         except (NoSuchElementException):
             logger.error("exact_exams_venue element not found")
@@ -316,9 +306,11 @@ class Scraper:
             logger.error(str(e))
             return None, None, None, None
 
-    def take_screenshot(self, name: str):
+    def take_screenshot(self, name: str) -> str:
 
         try:
+            # get date and time
+            now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             # scoll to end fo page
             self.driver.find_element(
                 By.XPATH, "/html/body").send_keys(Keys.END)
@@ -332,7 +324,8 @@ class Scraper:
             screenshot_path = f"./{name}"+".png"
             element.screenshot(f"./{name}"+".png")
 
-            image_url = upload_to_firebase_storage(screenshot_path, name)
+            image_url = upload_to_firebase_storage(
+                screenshot_path, f"{name}-{now}")
             logger.info('Schedule saved')
             return image_url
 
