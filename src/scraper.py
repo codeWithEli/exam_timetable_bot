@@ -5,7 +5,6 @@ import re
 import logging
 import dotenv
 
-from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -295,9 +294,10 @@ class Scraper:
                                     exam_venue = venue.text.split("|")[0]
                                     logger.info(
                                         f"""
-                                         
                                         Venue : {exam_venue} 
                                         """)
+                                    self.driver.execute_script(
+                                        "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue)
                                     return exam_venue
 
             if len(no_id_venues) > 0:
