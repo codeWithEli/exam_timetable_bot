@@ -38,14 +38,24 @@ def start(message):
     bot.send_message(
         message.chat.id,
         f"""
-Hello {message.from_user.username},
-Welcome to the Exams Timetable Bot! 
-This bot helps University of Ghana students 
-find their exam venues with ease. 
+Hello {message.from_user.username} 👋,
+Welcome to the Exams Timetable Bot! 🤖
+This bot is designed to assist University of Ghana students 🎓 in finding their exam venues with ease. 
 
-Get your exam date, time, and venue instantly.
+You can search for any course or multiple courses at any time. To search for multiple courses, simply separate each course with a comma. For example: MATH101, CHEM102, PHYS103
+
+Get your exam date 📅, time ⏰, and venue 📍 instantly. Just type in your course code(s) and let the bot do the rest!
+
+Happy studying and good luck with your exams! 📚🍀
+
     """, reply_markup=markup
     )
+
+
+@bot.message_handler(commands=['about'])
+def about_command(message):
+    bot.send_message(message.chat.id,
+                     "Hello! This is @eli_bigman. I created this Exams Timetable Bot after I nearly missed an exam. I wanted to make sure that no other student has to go through that stress. So, here's a simple way for all of us at the University of Ghana to get our exam schedules instantly. Just type in your course code(s), and let the bot handle the rest! 📚🍀 If you encounter any errors or issues, feel free to reach out. I'm here to help!")
 
 
 @bot.message_handler(func=lambda message: re.match(r'^[A-Za-z]{4}\d{3}$', message.text))
@@ -82,7 +92,6 @@ def handle_course_code(message):
 @bot.message_handler(func=lambda message: re.match(r'^\d{8}$', message.text))
 def handle_id(message):
     global course_code
-
     ID = int(message.text)
     bot.send_message(message.chat.id, "Searching for your venue... 🔍")
     # sending sticker
@@ -137,8 +146,9 @@ def handle_all_course(message):
 def callback_query(call):
     if call.data == "exams_schedule":
         bot.send_message(call.message.chat.id,
-                         "Please enter your course code (eg: ugrc101).")
-
+                         "📚 Please enter your course code (eg: ugrc101).")
+    elif call.data == "get_exact_venue":
+        bot.send_message(call.message.chat.id, "📍Please enter your ID")
     elif call.data == "all_exams":
         bot.send_message(
             call.message.chat.id, "📚 Please enter your course codes, separate with commas 👍"
