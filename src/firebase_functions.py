@@ -44,4 +44,15 @@ def upload_to_firebase_storage(local_file_path: str, remote_file_name: str) -> s
         return public_url
 
     except Exception as e:
-        logger.error(str(e))
+        logger.exception(str(e))
+
+
+def delete_from_firebase(remote_file_name):
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(f"screenshots/{remote_file_name}")
+        blob.delete()
+        logger.info("Screensht deleted from firebase")
+    except Exception as e:
+        logger.info("failed to delete from firebase")
+        logger.exception(str(e))

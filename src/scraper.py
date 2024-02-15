@@ -60,9 +60,6 @@ class Scraper:
 
         self.wait = WebDriverWait(self.driver, 10)
 
-        self.unavailable_courses = []
-        self.available_courses = []
-
     def click_schedule_gen(self):
         try:
             schedule_gen_xpath = "/html/body/header/nav/div/div[2]/ul/li[4]/a"
@@ -130,23 +127,19 @@ class Scraper:
             course_batch = course_lists.find_elements(By.TAG_NAME, 'li')
 
             self.batch_list = []
-
             for batch in course_batch:
-                self.batch_list.append(batch.text)
+                if batch.text != "No results found":
+                    self.batch_list.append(batch.text)
 
             logger.info(f'Found : {self.batch_list}')
 
             self.search_box.clear()
 
-            if self.batch_list[0] != "No results found":
+            if len(self.batch_list) > 0:
                 logger.info(f"Searching for {self.batch_list}")
                 for course_found in self.batch_list:
                     self.search_course(course_found)
                     self.search_box.send_keys(Keys.RETURN)
-                    return -1
-            else:
-                logger.info("Course not found")
-                return None
 
         except (NoSuchElementException):
             logger.error("get_batch element not found")
@@ -176,8 +169,12 @@ class Scraper:
 
             self.click_schedule_gen()
             self.get_batch(course_code)
-            self.click_generate()
-            return self.take_screenshot(course_code)
+            if len(self.batch_list) > 0:
+                self.click_generate()
+                return self.take_screenshot(course_code)
+            else:
+                logger.info("Course not found")
+                return None
 
         except (NoSuchElementException):
             logger.error("single exams schedulelement not found")
@@ -207,40 +204,35 @@ class Scraper:
 
     def all_courses_schedule(self, all_courses):
         try:
-            # all_courses = input(
-            #     "Please enter all your course: ").upper().replace(" ", "").split(',')
-            # for course in all_courses:
-            #     self.validate_course_code(course)
-            try:
+            self.unavailable_courses = []
+            self.available_courses = []
+            cleaned_courses = all_courses.upper().replace(" ", "").split(',')
+            self.click_schedule_gen()
 
-                self.click_schedule_gen()
+            logger.info(f'User requested for {cleaned_courses}')
 
-                logger.info(f'User requested for {all_courses}')
+            for course in cleaned_courses:
+                if self.is_course_available(course):
+                    self.available_courses.append(course)
+                else:
+                    self.unavailable_courses.append(course)
 
-                for course in all_courses:
-                    if self.is_course_available(course):
-                        self.available_courses.append(course)
-                    else:
-                        self.unavailable_courses.append(course)
+            logger.info(
+                f'Available course on UG timetable website : {self.available_courses}')
+            for found_courses in self.available_courses:
+                self.get_batch(found_courses)
 
-                logger.info(
-                    f'Available course on UG timetable website : {self.available_courses}')
-                for found_courses in self.available_courses:
-                    self.get_batch(found_courses)
+            self.click_generate()
+            logger.info(
+                f'Not available on UG timetable website Yet: {self.unavailable_courses}')
 
-                self.click_generate()
-                logger.info(
-                    f'Not available on UG timetable website Yet: {self.unavailable_courses}')
+            return self.take_screenshot("Exams_Schedule"), self.unavailable_courses
 
-                return self.take_screenshot("Exams_Schedule")
-
-            except (NoSuchElementException):
-                logger.error("all_course_schedule element NOT FOUND")
-            except (TimeoutException):
-                logger.error("Connection Timeout")
-            except Exception as e:
-                logger.error(str(e))
-        except ValueError as e:
+        except (NoSuchElementException):
+            logger.error("all_course_schedule element NOT FOUND")
+        except (TimeoutException):
+            logger.error("Connection Timeout")
+        except Exception as e:
             logger.error(str(e))
 
     def find_id(self, ID: int):
@@ -341,6 +333,6 @@ class Scraper:
 if __name__ == '__main__':
     scraper = Scraper()
     # scraper.single_exams_schedule()
-    scraper.find_exact_exams_venue("ugbs303", 11357857)
-    # scraper.all_courses_schedule()
+    # scraper.find_exact_exams_venue("ugbs303", 11357857)
+    scraper.all_courses_schedule(input("Enter courses"))
     scraper.cleanup()
