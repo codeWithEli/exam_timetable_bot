@@ -56,7 +56,7 @@ class Scraper:
 
         self.driver = webdriver.Chrome(service=service, options=options)
         self.driver.set_window_size(3000, 1500)
-        self.driver.get(URL)
+        self.driver.get(URL)  # "https://sts.ug.edu.gh/timetable/"
 
         self.wait = WebDriverWait(self.driver, 10)
 
@@ -82,14 +82,6 @@ class Scraper:
 
         except Exception as e:
             logger.error(str(e))
-
-    # def validate_course_code(self, course_code):
-
-    #     pattern = r'^[A-Za-z]{4}\d{3}$'
-
-    #     if not re.match(pattern, course_code):
-    #         raise ValueError(
-    #             f"Invalid course code: {course_code}. Expected format is 4 alphabets followed by 3 numbers")
 
     def is_course_available(self, course_code) -> bool:
         try:
@@ -189,11 +181,7 @@ class Scraper:
             self.click_generate()
             return self.find_id(ID), self.take_screenshot(course_code)
 
-            # try:
-            #     return self.find_id(ID), self.take_screenshot(course_code)
-            # except ValueError as e:
-            #     logger.error(str(e))
-            #     return str(e), self.take_screenshot(course_code)
+           
 
         except (NoSuchElementException):
             logger.error("exact_exams_venue element not found")
@@ -238,6 +226,7 @@ class Scraper:
     def find_id(self, ID: int):
         try:
             no_id_venues = []
+            
             rows = self.wait.until(
                 EC.presence_of_all_elements_located((By.TAG_NAME, "tr")))
 
@@ -334,5 +323,5 @@ if __name__ == '__main__':
     scraper = Scraper()
     # scraper.single_exams_schedule()
     # scraper.find_exact_exams_venue("ugbs303", 11357857)
-    scraper.all_courses_schedule(input("Enter courses"))
+    scraper.all_courses_schedule(input("Enter courses>>"))
     scraper.cleanup()

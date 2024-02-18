@@ -86,13 +86,18 @@ def handle_course_code(message):
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton(
             "📍 Get Exact Venue", callback_data='get_exact_venue'))
-        bot.send_photo(message.chat.id, screenshot_url, reply_markup=markup)
+        markup.add(types.InlineKeyboardButton(
+            "🗓 Create a remmider", callback_data='get_exact_venue'))
+        bot.send_photo(message.chat.id, screenshot_url)
+        bot.send_message(message.chat.id, "I can help you 👇👇👇👇👇👇👇👇",
+                         reply_markup=markup)
 
 
 @bot.message_handler(func=lambda message: re.match(r'^\d{8}$', message.text))
 def handle_id(message):
     global course_code
     ID = int(message.text)
+
     bot.send_message(message.chat.id, "Searching for your venue... 🔍")
     # sending sticker
     sticker_id = "CAACAgUAAxkBAAICWmXNVFmPZfVnlRYbCiLoaC6Ayz80AAJ1AgACrO6pVuBDnskq_U5QNAQ"
@@ -107,9 +112,13 @@ def handle_id(message):
     # Del sticker
     bot.delete_message(message.chat.id, sticker_message_id)
 
-    bot.send_message(
-        message.chat.id, f"Your exam venue is: {venue} 📍. \n Best of luck! 🌟")
-    bot.send_photo(message.chat.id, screenshot_url)
+    if venue is None:
+        bot.send_message(
+            message.chat.id, f"😞 Sorry NO EXAMS VENUE FOUND \n\n {ID} \n\n Please check the ID and try agian 🔄")
+    else:
+        bot.send_message(
+            message.chat.id, f"Your exam venue is: \n\n📍 {venue} 📍\n\nBest of luck! 🌟")
+        bot.send_photo(message.chat.id, screenshot_url)
 
 
 @bot.message_handler(func=lambda message: re.match(r'\b([a-zA-Z]{4}\s?\d{3},\s?)*[a-zA-Z]{4}\s?\d{3}\b', message.text))
@@ -163,7 +172,7 @@ def sticker_id(message):
 @bot.message_handler(func=lambda message: True)
 def default_handler(message):
     bot.send_message(
-        message.chat.id, "Sorry, I didn't understand that. 😕 \nPlease enter a valid course code 📚 \nConsiting of 4 letters and 3 numbers like ugrc101 ")
+        message.chat.id, "Sorry, I didn't understand that 😕 \nPlease enter a valid course code 📚 \nConsiting of 4 letters and 3 numbers like ugrc101 ")
 
 
 if __name__ == "__main__":
