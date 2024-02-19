@@ -1,4 +1,5 @@
 .env
-src/serviceAccount.json
 src/__pycache__
 logs/
+src/.credentials
+token.json

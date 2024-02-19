@@ -14,7 +14,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-cred = credentials.Certificate('src/serviceAccount.json')
+cred = credentials.Certificate('src/.credentials/serviceAccount.json')
 firebase_admin.initialize_app(
     cred, {"storageBucket": "ug-exams-bot.appspot.com"})
 
