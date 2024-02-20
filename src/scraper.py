@@ -181,8 +181,6 @@ class Scraper:
             self.click_generate()
             return self.find_id(ID), self.take_screenshot(course_code)
 
-           
-
         except (NoSuchElementException):
             logger.error("exact_exams_venue element not found")
             return None, None
@@ -226,7 +224,7 @@ class Scraper:
     def find_id(self, ID: int):
         try:
             no_id_venues = []
-            
+
             rows = self.wait.until(
                 EC.presence_of_all_elements_located((By.TAG_NAME, "tr")))
 
@@ -302,13 +300,14 @@ class Scraper:
             element = self.wait.until(
                 EC.presence_of_element_located((By.XPATH, exams_card_xpath)))
 
-            screenshot_path = f"./{name}"+".png"
-            element.screenshot(f"./{name}"+".png")
+            screenshot_path = f"./{name}-{now}"+".png"
+            # element.screenshot(f"./{name}-{now}"+".png")
+            element.screenshot(screenshot_path)
 
-            image_url = upload_to_firebase_storage(
-                screenshot_path, f"{name}-{now}")
-            logger.info('Schedule saved')
-            return image_url
+            # image_url = upload_to_firebase_storage(
+            #     screenshot_path, f"{name}-{now}")
+            # logger.info('Schedule saved')
+            return screenshot_path
 
         except (TimeoutException):
             logger.error("take_screenshot timeout")

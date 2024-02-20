@@ -3,3 +3,4 @@ src/__pycache__
 logs/
 src/.credentials
 token.json
+src/firebase_functions.py
