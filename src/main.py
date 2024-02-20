@@ -135,33 +135,28 @@ def handle_id(message):
         global course_code
 
         ID = int(message.text)
+        
+        bot.send_message(message.chat.id, "Searching for your venue... 🔍")
 
-        if not course_code:
+        send_sticker = bot.send_sticker(message.chat.id, sticker_id)
+        sticker_message_id = send_sticker.message_id
+
+        # Get venue and screenshot
+        venue, screenshot_path = scraper.find_exact_exams_venue(
+            course_code=course_code, ID=ID)
+
+        # Del sticker
+        bot.delete_message(message.chat.id, sticker_message_id)
+
+        if venue is None:
             bot.send_message(
-                message.chat.id, "⚠ Please search for a course first")
-
+                message.chat.id, f"😞 NO EXAMS VENUE FOUND❗❗\n\n {ID} \n\n Please check the ID and try agian 🔄")
         else:
-            bot.send_message(message.chat.id, "Searching for your venue... 🔍")
-
-            send_sticker = bot.send_sticker(message.chat.id, sticker_id)
-            sticker_message_id = send_sticker.message_id
-
-            # Get venue and screenshot
-            venue, screenshot_path = scraper.find_exact_exams_venue(
-                course_code=course_code, ID=ID)
-
-            # Del sticker
-            bot.delete_message(message.chat.id, sticker_message_id)
-
-            if venue is None:
-                bot.send_message(
-                    message.chat.id, f"😞 NO EXAMS VENUE FOUND❗❗\n\n {ID} \n\n Please check the ID and try agian 🔄")
-            else:
-                bot.send_message(
-                    message.chat.id, f"{course_code} venue for ID: {ID} is \n\n📍 {venue} 📍\n\nBest of luck! 🌟")
-                with open(screenshot_path, 'rb') as screenshot:
-                    bot.send_photo(message.chat.id, screenshot)
-                os.remove(screenshot_path)
+            bot.send_message(
+                message.chat.id, f"{course_code} venue for ID: {ID} is \n\n📍 {venue} 📍\n\nBest of luck! 🌟")
+            with open(screenshot_path, 'rb') as screenshot:
+                bot.send_photo(message.chat.id, screenshot)
+            os.remove(screenshot_path)
     except Exception as e:
         logger.exception(str(e))
 
