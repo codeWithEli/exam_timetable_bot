@@ -17,8 +17,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
-from firebase_functions import upload_to_firebase_storage
-
 
 # constants
 dotenv.load_dotenv()
@@ -239,11 +237,7 @@ class Scraper:
 
                     if len(e_venues) == 1:
                         exam_venue = e_venues[0].text.split("|")[0]
-                        logger.info(
-                            f"""
-                               
-                            Venue : {exam_venue} 
-                            """)
+                        logger.info(f"Venue : {exam_venue}")
 
                         return exam_venue
 

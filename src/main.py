@@ -1,5 +1,4 @@
 import os
-import time
 import re
 import logging
 import dotenv
@@ -21,10 +20,14 @@ TOKEN = os.environ["TOKEN"]
 
 bot = telebot.TeleBot(TOKEN)
 
+# Create Scraper class instance
 scraper = scraper.Scraper()
 
 global sticker_id
 sticker_id = "CAACAgUAAxkBAAICWmXNVFmPZfVnlRYbCiLoaC6Ayz80AAJ1AgACrO6pVuBDnskq_U5QNAQ"
+
+global course_code
+course_code = None
 
 
 @bot.message_handler(commands=['start'])
@@ -55,13 +58,13 @@ def help_command(message):
 Hello {message.from_user.username} 👋,
 Here's how you can use the UG Exams Timetable Bot! 🤖
 
-1. Start by searching for your course using its code. For example, you can type `MATH101` to search for the MATH101 course.
+1. Start by searching for your course using its code. For example, you can type MATH101 to search for the MATH101 course.
 
-2. If you want to search for multiple courses at once, simply separate each course code with a comma. For example: `MATH101, CHEM102, PHYS103`.
+2. If you want to search for multiple courses at once, simply separate each course code with a comma. For example: MATH101, CHEM102, PHYS103, FLAW104
 
 3. The bot will return your exam date 📅, time ⏰, and venue 📍 instantly.
 
-Remember, you can always type `/start` to get a welcome message, or `/about` to learn more about this bot.
+Remember, you can always type /start to get a welcome message, /about to learn more about this bot or /help to get help.
 
 Happy studying and good luck with your exams! 📚🍀
         """
@@ -116,10 +119,12 @@ def handle_course_code(message):
             # markup.add(types.InlineKeyboardButton(
             #     "🗓 Create a remmider", callback_data='get_exact_venue'))
 
+            # Send and delete photo
             with open(screenshot_path, 'rb') as screenshot:
                 bot.send_photo(message.chat.id, screenshot)
             bot.send_message(message.chat.id, "I can also help you 👇👇👇👇👇👇",
                              reply_markup=markup)
+            os.remove(screenshot_path)
     except Exception as e:
         logger.info(str(e))
 
@@ -153,7 +158,7 @@ def handle_id(message):
                     message.chat.id, f"😞 NO EXAMS VENUE FOUND❗❗\n\n {ID} \n\n Please check the ID and try agian 🔄")
             else:
                 bot.send_message(
-                    message.chat.id, f"Your exam venue is : \n\n📍 {venue} 📍\n\nBest of luck! 🌟")
+                    message.chat.id, f"{course_code} venue for ID: {ID} is \n\n📍 {venue} 📍\n\nBest of luck! 🌟")
                 with open(screenshot_path, 'rb') as screenshot:
                     bot.send_photo(message.chat.id, screenshot)
                 os.remove(screenshot_path)
@@ -163,11 +168,13 @@ def handle_id(message):
 
 @bot.message_handler(func=lambda message: re.match(r'\b([a-zA-Z]{4}\d{3},\s?)*[a-zA-Z]{4}\d{3}\b', message.text))
 def handle_all_course(message):
+
     try:
         courses = message.text
         cleaned_courses = courses.upper().replace(" ", "").split(",")
+        user_courses = ", ".join(cleaned_courses)
         bot.send_message(
-            message.chat.id, f"🔍 Searching for {cleaned_courses} ")
+            message.chat.id, f"🔍 Searching for {user_courses} ")
 
         send_sticker = bot.send_sticker(message.chat.id, sticker_id)
         sticker_message_id = send_sticker.message_id
@@ -176,17 +183,19 @@ def handle_all_course(message):
         screenshot_path, unavailable_courses = scraper.all_courses_schedule(
             courses)
 
-        # Del sticker
+        # Delete sticker
         bot.delete_message(message.chat.id, sticker_message_id)
 
+        # Send and delete photo
         with open(screenshot_path, 'rb') as screenshot:
             bot.send_photo(message.chat.id, screenshot)
-        # bot.send_photo(message.chat.id, screenshot_path)
         os.remove(screenshot_path)
 
         if len(unavailable_courses) > 0:
+            not_found_courses = ", ".join(unavailable_courses)
             bot.send_message(
-                message.chat.id, f"Unavailable: {unavailable_courses} ❗️❗️ Please double-check the course code \n\nIts possible that these courses have not yet been uploaded to the site 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰")
+                message.chat.id, f"Unavailable: {not_found_courses} ❗️❗️ Please double-check the course code \n\nIts possible that these courses have not yet been uploaded to the site 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
+            )
 
     except Exception as e:
         logger.error(str(e))
@@ -194,15 +203,12 @@ def handle_all_course(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    if call.data == "exams_schedule":
+
+    if call.data == "get_exact_venue" and course_code is None:
         bot.send_message(call.message.chat.id,
-                         "📚 Please enter your course code (eg: ugrc101).")
-    elif call.data == "get_exact_venue":
+                         "⚠ Please search for a course first")
+    elif call.data == "get_exact_venue" and course_code is not None:
         bot.send_message(call.message.chat.id, "📍Please enter your ID")
-    elif call.data == "all_exams":
-        bot.send_message(
-            call.message.chat.id, "📚 Please enter your course codes, separate with commas 👍"
-        )
 
 
 @bot.message_handler(func=lambda message: True)
