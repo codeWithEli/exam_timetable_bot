@@ -16,7 +16,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
-TOKEN = os.environ["TOKEN"]
+TOKEN = os.environ["BOT_TOKEN"]
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -135,7 +135,7 @@ def handle_id(message):
         global course_code
 
         ID = int(message.text)
-        
+
         bot.send_message(message.chat.id, "Searching for your venue... 🔍")
 
         send_sticker = bot.send_sticker(message.chat.id, sticker_id)

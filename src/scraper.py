@@ -20,7 +20,7 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 # constants
 dotenv.load_dotenv()
-URL = os.getenv("URL")
+URL = os.getenv("UG_URL")
 
 # configuring logger
 logging.basicConfig(
