@@ -26,8 +26,11 @@ scraper = scraper.Scraper()
 global sticker_id
 sticker_id = "CAACAgUAAxkBAAICWmXNVFmPZfVnlRYbCiLoaC6Ayz80AAJ1AgACrO6pVuBDnskq_U5QNAQ"
 
-global course_code
-course_code = None
+# global course_code
+
+temp_course_code = {}
+
+# course_code = None
 
 
 @bot.message_handler(commands=['start'])
@@ -91,8 +94,14 @@ Enjoy using the bot! 💯"""
 @bot.message_handler(func=lambda message: re.match(r'^[A-Za-z]{4}\s?\d{3}$', message.text))
 def handle_course_code(message):
     try:
-        global course_code
+        # global course_code
+        user_id = message.chat.id
+
         course_code = message.text.upper().replace(" ", "")
+
+        # Update course code for user
+        temp_course_code[user_id] = {'course_name': course_code}
+
         bot.send_message(
             message.chat.id, f"🔍 Searching for {course_code}...🚀")
 
@@ -132,7 +141,10 @@ def handle_course_code(message):
 @bot.message_handler(func=lambda message: re.match(r'^\d{8}$', message.text))
 def handle_id(message):
     try:
-        global course_code
+        # global course_code
+        user_id = message.chat.id
+
+        course_code = temp_course_code[user_id]["course_name"]
 
         ID = int(message.text)
 
@@ -157,6 +169,10 @@ def handle_id(message):
             with open(screenshot_path, 'rb') as screenshot:
                 bot.send_photo(message.chat.id, screenshot)
             os.remove(screenshot_path)
+
+        # Set corse code to None
+        temp_course_code[user_id] = {'course_code': None}
+
     except Exception as e:
         logger.exception(str(e))
 
@@ -198,12 +214,14 @@ def handle_all_course(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
+    user_id = call.message.chat.id
 
-    if call.data == "get_exact_venue" and course_code is None:
-        bot.send_message(call.message.chat.id,
-                         "⚠ Please search for a course first")
-    elif call.data == "get_exact_venue" and course_code is not None:
-        bot.send_message(call.message.chat.id, "📍Please enter your ID")
+    if call.data == "get_exact_venue":
+        if temp_course_code.get(user_id, None)['course_name'] is None:
+            bot.send_message(user_id,
+                             "⚠ Please search for a course first")
+        else:
+            bot.send_message(user_id, "📍Please enter your ID")
 
 
 @bot.message_handler(func=lambda message: True)
