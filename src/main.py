@@ -144,21 +144,30 @@ def handle_id(message):
         # global course_code
         user_id = message.chat.id
 
-        course_code = temp_course_code[user_id]["course_name"]
+        logger.info(f"temp_course code -- {temp_course_code}")
 
-        ID = int(message.text)
+        if user_id in temp_course_code and "course_name" in temp_course_code[user_id] and temp_course_code[user_id]["course_name"] is not None:
 
-        bot.send_message(message.chat.id, "Searching for your venue... 🔍")
+            course_code = temp_course_code[user_id]["course_name"]
 
-        send_sticker = bot.send_sticker(message.chat.id, sticker_id)
-        sticker_message_id = send_sticker.message_id
+            ID = int(message.text)
 
-        # Get venue and screenshot
-        venue, screenshot_path = scraper.find_exact_exams_venue(
-            course_code=course_code, ID=ID)
+            bot.send_message(message.chat.id, "Searching for your venue... 🔍")
 
-        # Del sticker
-        bot.delete_message(message.chat.id, sticker_message_id)
+            send_sticker = bot.send_sticker(message.chat.id, sticker_id)
+            sticker_message_id = send_sticker.message_id
+
+            # Get venue and screenshot
+            venue, screenshot_path = scraper.find_exact_exams_venue(
+                course_code=course_code, ID=ID)
+
+            # Del sticker
+            bot.delete_message(message.chat.id, sticker_message_id)
+
+        else:
+            bot.send_message(user_id, "⚠ Please search for a course first")
+            logger.info('No course code found')
+            return
 
         if venue is None:
             bot.send_message(
@@ -169,9 +178,10 @@ def handle_id(message):
             with open(screenshot_path, 'rb') as screenshot:
                 bot.send_photo(message.chat.id, screenshot)
             os.remove(screenshot_path)
+            logger.info("Venue search successful")
 
         # Set corse code to None
-        temp_course_code[user_id] = {'course_code': None}
+        temp_course_code[user_id] = {'course_name': None}
 
     except Exception as e:
         logger.exception(str(e))
