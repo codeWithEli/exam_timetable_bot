@@ -8,6 +8,8 @@ import scraper
 import telebot
 from telebot import types
 
+from firebase_functions import get_course_code, set_course_code
+
 # Configure logger
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -25,12 +27,6 @@ scraper = scraper.Scraper()
 
 global sticker_id
 sticker_id = "CAACAgUAAxkBAAICWmXNVFmPZfVnlRYbCiLoaC6Ayz80AAJ1AgACrO6pVuBDnskq_U5QNAQ"
-
-# global course_code
-
-temp_course_code = {}
-
-# course_code = None
 
 
 @bot.message_handler(commands=['start'])
@@ -100,7 +96,7 @@ def handle_course_code(message):
         course_code = message.text.upper().replace(" ", "")
 
         # Update course code for user
-        temp_course_code[user_id] = {'course_name': course_code}
+        set_course_code(user_id, course_code)
 
         bot.send_message(
             message.chat.id, f"🔍 Searching for {course_code}...🚀")
@@ -144,11 +140,9 @@ def handle_id(message):
         # global course_code
         user_id = message.chat.id
 
-        logger.info(f"temp_course code -- {temp_course_code}")
 
-        if user_id in temp_course_code and "course_name" in temp_course_code[user_id] and temp_course_code[user_id]["course_name"] is not None:
-
-            course_code = temp_course_code[user_id]["course_name"]
+        if get_course_code(user_id) is not None:
+            course_code = get_course_code(user_id)
 
             ID = int(message.text)
 
@@ -181,7 +175,7 @@ def handle_id(message):
             logger.info("Venue search successful")
 
         # Set corse code to None
-        temp_course_code[user_id] = {'course_name': None}
+        set_course_code(user_id, None)
 
     except Exception as e:
         logger.exception(str(e))
@@ -227,7 +221,7 @@ def callback_query(call):
     user_id = call.message.chat.id
 
     if call.data == "get_exact_venue":
-        if temp_course_code.get(user_id, None)['course_name'] is None:
+        if get_course_code(user_id) is None:
             bot.send_message(user_id,
                              "⚠ Please search for a course first")
         else:
