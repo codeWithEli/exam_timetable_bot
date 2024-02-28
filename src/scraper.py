@@ -135,7 +135,8 @@ class Scraper:
             logger.error("get_batch element not found")
 
         except (ConnectionError):
-            logger.error("get_batch connection..check internet connection")
+            logger.error(
+                "get_batch connection error..check internet connection")
 
         except Exception as e:
             logger.error(str(e))
@@ -168,16 +169,18 @@ class Scraper:
 
         except (NoSuchElementException):
             logger.error("single exams schedulelement not found")
+            return None
 
         except Exception as e:
             logger.error(str(e))
+            return None
 
-    def find_exact_exams_venue(self, course_code, ID: int):
+    def find_exact_exams_venue(self, course_code, ID=None):
         try:
             self.click_schedule_gen()
             self.get_batch(course_code)
             self.click_generate()
-            return self.find_id(ID), self.take_screenshot(course_code)
+            return self.get_exams_detail(ID), self.take_screenshot(course_code)
 
         except (NoSuchElementException):
             logger.error("exact_exams_venue element not found")
@@ -219,10 +222,53 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def find_id(self, ID: int):
-        try:
-            no_id_venues = []
+    def get_exam_venue(self, e_venues, ID=None):
+        no_id_venues = []
+        all_venues = []
 
+        for venue in e_venues:
+            # Get all venues
+            all_venues.append(venue.text)
+
+            id_range_text = venue.find_element(
+                By.TAG_NAME, "span").text
+
+            id_range = list(
+                map(int, re.findall(r'\d+', id_range_text)))
+
+            # Clear previous highlighs
+            self.driver.execute_script(
+                "arguments[0].setAttribute('style', '');", venue)
+
+            if id_range_text == "":
+                no_id_venues.append(
+                    e_venues[0].text.split("|")[0])
+
+            elif id_range_text != "" and ID is not None:
+                if id_range[0] <= ID <= id_range[1]:
+                    logger.info(id_range)
+                    exam_venue = venue.text.split("|")[0]
+                    logger.info(
+                        f"""
+                        Venue : {exam_venue} 
+                        """)
+                    self.driver.execute_script(
+                        "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue)
+                    return exam_venue
+
+        if ID is None:
+            logger.info(f'All venues -- {all_venues}')
+            return all_venues
+
+        if len(no_id_venues) > 0:
+            logger.info(
+                f"Exact venue NOT FOUND. Possible venue ==> {no_id_venues}")
+            return no_id_venues
+        else:
+            return None
+
+    def get_exams_detail(self, ID=None):
+        try:
             rows = self.wait.until(
                 EC.presence_of_all_elements_located((By.TAG_NAME, "tr")))
 
@@ -230,52 +276,17 @@ class Scraper:
                 cols = row.find_elements(By.TAG_NAME, "td")
 
                 if len(cols) > 0:
-                    # e_course = cols[0]
-                    # e_date = cols[1]
-                    # e_time = cols[2]
+                    e_course = cols[0].text
+                    e_date = cols[1].text
+                    e_time = cols[2].text
                     e_venues = cols[3].find_elements(By.TAG_NAME, "li")
 
-                    if len(e_venues) == 1:
-                        exam_venue = e_venues[0].text.split("|")[0]
-                        logger.info(f"Venue : {exam_venue}")
+                    exam_venue = self.get_exam_venue(e_venues, ID)
+                    if exam_venue:
+                        return e_course, e_date, e_time, exam_venue
 
-                        return exam_venue
-
-                    else:
-                        for venue in e_venues:
-                            id_range_text = venue.find_element(
-                                By.TAG_NAME, "span").text
-                            id_range = list(
-                                map(int, re.findall(r'\d+', id_range_text)))
-
-                            # Clear previous highlighs
-                            for venue in e_venues:
-                                self.driver.execute_script(
-                                    "arguments[0].setAttribute('style', '');", venue)
-
-                            if id_range_text == "":
-                                no_id_venues.append(
-                                    e_venues[0].text.split("|")[0])
-                            elif id_range_text != "":
-                                if id_range[0] <= ID <= id_range[1]:
-                                    logger.info(id_range)
-                                    exam_venue = venue.text.split("|")[0]
-                                    logger.info(
-                                        f"""
-                                        Venue : {exam_venue} 
-                                        """)
-                                    self.driver.execute_script(
-                                        "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue)
-                                    return exam_venue
-
-            if len(no_id_venues) > 0:
-                logger.info(
-                    f"Exact venue NOT FOUND. Possible venue ==> {no_id_venues}")
-                return no_id_venues
-            else:
-                logger.info(
-                    f"Exact venue NOT FOUND")
-                return None
+            logger.info(f"Exact venue NOT FOUND")
+            return None
 
         except (NoSuchElementException):
             logger.error("No such element")
@@ -320,6 +331,6 @@ class Scraper:
 if __name__ == '__main__':
     scraper = Scraper()
     # scraper.single_exams_schedule()
-    # scraper.find_exact_exams_venue("ugbs303", 11357857)
-    scraper.all_courses_schedule(input("Enter courses>>"))
+    scraper.find_exact_exams_venue("ugbs303")
+    # scraper.all_courses_schedule(input("Enter courses>>"))
     scraper.cleanup()
