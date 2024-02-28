@@ -239,11 +239,7 @@ class Scraper:
             self.driver.execute_script(
                 "arguments[0].setAttribute('style', '');", venue)
 
-            if id_range_text == "":
-                no_id_venues.append(
-                    e_venues[0].text.split("|")[0])
-
-            elif id_range_text != "" and ID is not None:
+            if id_range_text != "" and ID is not None:
                 if id_range[0] <= ID <= id_range[1]:
                     logger.info(id_range)
                     exam_venue = venue.text.split("|")[0]
@@ -261,8 +257,6 @@ class Scraper:
         if ID is None:
             logger.info(f'All venues -- {all_venues}')
             return all_venues
-
-        
 
     def get_exams_detail(self, ID=None):
         try:
