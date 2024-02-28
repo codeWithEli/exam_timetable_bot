@@ -241,12 +241,8 @@ class Scraper:
 
             if id_range_text != "" and ID is not None:
                 if id_range[0] <= ID <= id_range[1]:
-                    logger.info(id_range)
+                    logger.info(f'Found ID range - {id_range}')
                     exam_venue = venue.text.split("|")[0]
-                    logger.info(
-                        f"""
-                        Venue : {exam_venue} 
-                        """)
                     self.driver.execute_script(
                         "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue)
                     return exam_venue
@@ -255,7 +251,6 @@ class Scraper:
                     ID = None
 
         if ID is None:
-            logger.info(f'All venues -- {all_venues}')
             return all_venues
 
     def get_exams_detail(self, ID=None):
@@ -274,6 +269,14 @@ class Scraper:
 
                     exam_venue = self.get_exam_venue(e_venues, ID)
                     if exam_venue:
+                        logger.info(
+                            f"""
+
+                        Course Name : {e_course}
+                        Exams Date : {e_date}
+                        Exams Time : {e_time}
+                        Exams Venue : {exam_venue} 
+                        """)
                         return e_course, e_date, e_time, exam_venue
 
             logger.info(f"Exact venue NOT FOUND")
@@ -322,6 +325,6 @@ class Scraper:
 if __name__ == '__main__':
     scraper = Scraper()
     # scraper.single_exams_schedule()
-    scraper.find_exact_exams_venue("ugbs303")
-    # scraper.all_courses_schedule(input("Enter courses>>"))
+    # scraper.find_exact_exams_venue("ugbs303", 10953871)
+    scraper.all_courses_schedule("ugbs303, dcit303, ABCS342")
     scraper.cleanup()
