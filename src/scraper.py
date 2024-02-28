@@ -248,6 +248,11 @@ class Scraper:
                             id_range = list(
                                 map(int, re.findall(r'\d+', id_range_text)))
 
+                            # Clear previous highlighs
+                            for venue in e_venues:
+                                self.driver.execute_script(
+                                    "arguments[0].setAttribute('style', '');", venue)
+
                             if id_range_text == "":
                                 no_id_venues.append(
                                     e_venues[0].text.split("|")[0])
