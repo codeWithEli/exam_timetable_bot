@@ -255,6 +255,9 @@ class Scraper:
                     self.driver.execute_script(
                         "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue)
                     return exam_venue
+                else:
+                    logger.info("ID not in range")
+                    ID = None
 
         if ID is None:
             logger.info(f'All venues -- {all_venues}')
