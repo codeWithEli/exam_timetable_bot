@@ -223,7 +223,6 @@ class Scraper:
             logger.error(str(e))
 
     def get_exam_venue(self, e_venues, ID=None):
-        no_id_venues = []
         all_venues = []
 
         for venue in e_venues:
@@ -263,12 +262,7 @@ class Scraper:
             logger.info(f'All venues -- {all_venues}')
             return all_venues
 
-        if len(no_id_venues) > 0:
-            logger.info(
-                f"Exact venue NOT FOUND. Possible venue ==> {no_id_venues}")
-            return no_id_venues
-        else:
-            return None
+        
 
     def get_exams_detail(self, ID=None):
         try:
