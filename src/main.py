@@ -8,7 +8,7 @@ import scraper
 import telebot
 from telebot import types
 
-from firebase_functions import get_course_code, set_course_code
+from firebase_functions import get_course_code, set_course_code, get_exams_venue
 
 # Configure logger
 logging.basicConfig(
@@ -90,7 +90,7 @@ Enjoy using the bot! 💯"""
 @bot.message_handler(func=lambda message: re.match(r'^[A-Za-z]{4}\s?\d{3}$', message.text))
 def handle_course_code(message):
     try:
-        # global course_code
+
         user_id = message.chat.id
 
         course_code = message.text.upper().replace(" ", "")
@@ -99,22 +99,22 @@ def handle_course_code(message):
         set_course_code(user_id, course_code)
 
         bot.send_message(
-            message.chat.id, f"🔍 Searching for {course_code}...🚀")
+            user_id, f"🔍 Searching for {course_code}...🚀")
 
         # sending sticker
 
-        send_sticker = bot.send_sticker(message.chat.id, sticker_id)
+        send_sticker = bot.send_sticker(user_id, sticker_id)
         sticker_message_id = send_sticker.message_id
 
         # Get screenshot for a single exams
-        screenshot_path = scraper.single_exams_schedule(course_code)
+        screenshot_path = scraper.single_exams_schedule(course_code, user_id)
 
         # Del sticker
-        bot.delete_message(message.chat.id, sticker_message_id)
+        bot.delete_message(user_id, sticker_message_id)
 
         if screenshot_path is None:
             bot.send_message(
-                message.chat.id, f"Couldn't find {course_code} ❗️❗️❗️\nPlease double-check the course codes\n\nIts possible that this course has not yet been uploaded to the site 🌐\n( https://sts.ug.edu.gh/timetable/ ) \ntry searching for them at a later time ⏰")
+                user_id, f"Couldn't find {course_code} ❗️❗️❗️\nPlease double-check the course codes\n\nIts possible that this course has not yet been uploaded to the site 🌐\n( https://sts.ug.edu.gh/timetable/ ) \ntry searching for them at a later time ⏰")
             return
 
         else:
@@ -126,8 +126,8 @@ def handle_course_code(message):
 
             # Send and delete photo
             with open(screenshot_path, 'rb') as screenshot:
-                bot.send_photo(message.chat.id, screenshot)
-            bot.send_message(message.chat.id, "I can also help you 👇👇👇👇👇👇",
+                bot.send_photo(user_id, screenshot)
+            bot.send_message(user_id, "I can also help you with 👇👇👇👇",
                              reply_markup=markup)
             os.remove(screenshot_path)
     except Exception as e:
@@ -137,40 +137,42 @@ def handle_course_code(message):
 @bot.message_handler(func=lambda message: re.match(r'^\d{8}$', message.text))
 def handle_id(message):
     try:
-        # global course_code
+
         user_id = message.chat.id
 
-
-        if get_course_code(user_id) is not None:
+        if get_course_code(user_id) is not None and message.text:
             course_code = get_course_code(user_id)
 
             ID = int(message.text)
 
-            bot.send_message(message.chat.id, "Searching for your venue... 🔍")
+            bot.send_message(user_id, "Searching for your venue... 🔍")
 
-            send_sticker = bot.send_sticker(message.chat.id, sticker_id)
+            send_sticker = bot.send_sticker(user_id, sticker_id)
             sticker_message_id = send_sticker.message_id
 
             # Get venue and screenshot
-            venue, screenshot_path = scraper.find_exact_exams_venue(
-                course_code=course_code, ID=ID)
+            screenshot_path = scraper.find_exact_exams_venue(
+                course_code=course_code, user_id=user_id, ID=ID)
+
+            venue = get_exams_venue(user_id)
 
             # Del sticker
-            bot.delete_message(message.chat.id, sticker_message_id)
+            bot.delete_message(user_id, sticker_message_id)
 
         else:
             bot.send_message(user_id, "⚠ Please search for a course first")
             logger.info('No course code found')
+            set_course_code(user_id, None)
             return
 
         if venue is None:
             bot.send_message(
-                message.chat.id, f"😞 NO EXAMS VENUE FOUND❗❗\n\n {ID} \n\n Please check the ID and try agian 🔄")
+                user_id, f"😞 NO EXAMS VENUE FOUND❗❗\n\n {ID} \n\n Please check the ID and try agian 🔄")
         else:
             bot.send_message(
-                message.chat.id, f"{course_code} venue for ID: {ID} is \n\n📍 {venue} 📍\n\nBest of luck! 🌟")
+                user_id, f"{course_code} venue for ID: {ID} is \n\n📍 {venue} 📍\n\nBest of luck! 🌟")
             with open(screenshot_path, 'rb') as screenshot:
-                bot.send_photo(message.chat.id, screenshot)
+                bot.send_photo(user_id, screenshot)
             os.remove(screenshot_path)
             logger.info("Venue search successful")
 
@@ -185,31 +187,32 @@ def handle_id(message):
 def handle_all_course(message):
 
     try:
+        user_id = message.chat.id
         courses = message.text
         cleaned_courses = courses.upper().replace(" ", "").split(",")
         user_courses = ", ".join(cleaned_courses)
         bot.send_message(
-            message.chat.id, f"🔍 Searching for {user_courses} ")
+            user_id, f"🔍 Searching for {user_courses} ")
 
-        send_sticker = bot.send_sticker(message.chat.id, sticker_id)
+        send_sticker = bot.send_sticker(user_id, sticker_id)
         sticker_message_id = send_sticker.message_id
 
         # Getting course details
         screenshot_path, unavailable_courses = scraper.all_courses_schedule(
-            courses)
+            courses, user_id)
 
         # Delete sticker
-        bot.delete_message(message.chat.id, sticker_message_id)
+        bot.delete_message(user_id, sticker_message_id)
 
         # Send and delete photo
         with open(screenshot_path, 'rb') as screenshot:
-            bot.send_photo(message.chat.id, screenshot)
+            bot.send_photo(user_id, screenshot)
         os.remove(screenshot_path)
 
         if len(unavailable_courses) > 0:
             not_found_courses = ", ".join(unavailable_courses)
             bot.send_message(
-                message.chat.id, f"Unavailable: {not_found_courses} ❗️❗️ Please double-check the course code \n\nIts possible that these courses have not yet been uploaded to the site 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
+                user_id, f"Unavailable: {not_found_courses} ❗️❗️ Please double-check the course code \n\nIts possible that these courses have not yet been uploaded to the site 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
             )
 
     except Exception as e:
