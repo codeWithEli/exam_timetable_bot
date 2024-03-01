@@ -17,6 +17,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
+import firebase_functions as FB
 
 # constants
 dotenv.load_dotenv()
@@ -155,32 +156,37 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def single_exams_schedule(self, course_code):
+    def single_exams_schedule(self, course_code, user_id):
         try:
 
             self.click_schedule_gen()
             self.get_batch(course_code)
             if len(self.batch_list) > 0:
                 self.click_generate()
-                return self.take_screenshot(course_code)
+
+                # save exams details to firebase
+                # self.get_exams_detail(user_id, ID=None)
+                return self.take_screenshot(user_id, course_code)
             else:
-                logger.info("Course not found")
+                logger.info(f"{course_code} Not found !!")
                 return None
 
         except (NoSuchElementException):
-            logger.error("single exams schedulelement not found")
+            logger.error("Single exams schedulelement not found")
             return None
 
         except Exception as e:
             logger.error(str(e))
             return None
 
-    def find_exact_exams_venue(self, course_code, ID=None):
+    def find_exact_exams_venue(self, course_code, user_id, ID=None):
         try:
             self.click_schedule_gen()
             self.get_batch(course_code)
             self.click_generate()
-            return self.get_exams_detail(ID), self.take_screenshot(course_code)
+            self.get_exams_detail(user_id, ID)
+
+            return self.take_screenshot(user_id, course_code)
 
         except (NoSuchElementException):
             logger.error("exact_exams_venue element not found")
@@ -189,7 +195,7 @@ class Scraper:
             logger.error(str(e))
             return None, None
 
-    def all_courses_schedule(self, all_courses):
+    def all_courses_schedule(self, all_courses, user_id, ID=None):
         try:
             self.unavailable_courses = []
             self.available_courses = []
@@ -210,6 +216,8 @@ class Scraper:
                 self.get_batch(found_courses)
 
             self.click_generate()
+
+            self.get_exams_detail(user_id, ID)
             logger.info(
                 f'Not available on UG timetable website Yet: {self.unavailable_courses}')
 
@@ -222,43 +230,54 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def get_exam_venue(self, e_venues, ID=None):
-        all_venues = []
-
-        for venue in e_venues:
-            # Get all venues
-            all_venues.append(venue.text)
-
-            id_range_text = venue.find_element(
-                By.TAG_NAME, "span").text
-
-            id_range = list(
-                map(int, re.findall(r'\d+', id_range_text)))
-
-            # Clear previous highlighs
-            self.driver.execute_script(
-                "arguments[0].setAttribute('style', '');", venue)
-
-            if id_range_text != "" and ID is not None:
-                if id_range[0] <= ID <= id_range[1]:
-                    logger.info(f'Found ID range - {id_range}')
-                    exam_venue = venue.text.split("|")[0]
-                    self.driver.execute_script(
-                        "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue)
-                    return exam_venue
-                else:
-                    logger.info("ID not in range")
-                    ID = None
-
-        if ID is None:
-            return all_venues
-
-    def get_exams_detail(self, ID=None):
+    def exact_exam_venue(self, e_venues, ID=None):
         try:
+            for venue in e_venues:
+                id_range_text = venue.find_element(
+                    By.TAG_NAME, "span").text
+
+                id_range = list(
+                    map(int, re.findall(r'\d+', id_range_text)))
+
+                # Clear previous highlighs
+                self.driver.execute_script(
+                    "arguments[0].setAttribute('style', '');", venue)
+
+                if id_range_text != "" and ID is not None:
+                    if id_range[0] <= ID <= id_range[1]:
+                        logger.info(f'Found ID range - {id_range}')
+                        exam_venue = venue.text.split("|")[0]
+                        self.driver.execute_script(
+                            "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue)
+
+                        logger.info(
+                            f'Found exact exams venue {exam_venue}')
+                        return exam_venue
+                    else:
+                        logger.info("ID not in range")
+                        # FB.set_exact_venue(user_id, course, exam_venue=None)
+                        return None
+
+                elif id_range_text == "" and ID is not None:
+                    logger.info(f"Exact venue for {ID} not FOUND")
+                    # FB.set_exact_venue(user_id, course, exam_venue=None)
+                    return None
+
+                else:
+                    logger.info("Returning all venues")
+                    # FB.set_exact_venue(user_id, course, exam_venue=None)
+                    return None
+
+        except Exception as e:
+            logger.error(str(e))
+
+    def get_exams_detail(self, user_id: str, ID=None):
+        try:
+
             rows = self.wait.until(
                 EC.presence_of_all_elements_located((By.TAG_NAME, "tr")))
 
-            for row in rows:
+            for row in rows[1:]:
                 cols = row.find_elements(By.TAG_NAME, "td")
 
                 if len(cols) > 0:
@@ -267,29 +286,38 @@ class Scraper:
                     e_time = cols[2].text
                     e_venues = cols[3].find_elements(By.TAG_NAME, "li")
 
-                    exam_venue = self.get_exam_venue(e_venues, ID)
-                    if exam_venue:
-                        logger.info(
-                            f"""
+                    all_venues = []
 
-                        Course Name : {e_course}
-                        Exams Date : {e_date}
-                        Exams Time : {e_time}
-                        Exams Venue : {exam_venue} 
-                        """)
-                        return e_course, e_date, e_time, exam_venue
+                    for venue in e_venues:
+                        # Get all venues
+                        all_venues.append(venue.text)
 
-            logger.info(f"Exact venue NOT FOUND")
-            return None
+                    if ID != None:
+                        exact_venue = self.exact_exam_venue(e_venues, ID)
+
+                    FB.save_exams_details(user_id, e_course,
+                                          e_date, e_time, all_venues)
+                    FB.set_exact_venue(user_id, e_course, exact_venue)
+                    logger.info(
+                        f"""
+
+                    Course Name : {e_course}
+                    Exams Date : {e_date}
+                    Exams Time : {e_time}
+                    Exams Venue : {all_venues}
+
+                    """)
+
+            return  # get_saved_exams_details(user_id)
 
         except (NoSuchElementException):
             logger.error("No such element")
-            return None, None, None, None
+            return None
         except Exception as e:
             logger.error(str(e))
-            return None, None, None, None
+            return None
 
-    def take_screenshot(self, name: str) -> str:
+    def take_screenshot(self, user_id: str, name: str) -> str:
 
         try:
             # get date and time
@@ -304,7 +332,7 @@ class Scraper:
             element = self.wait.until(
                 EC.presence_of_element_located((By.XPATH, exams_card_xpath)))
 
-            screenshot_path = f"./{name}-{now}"+".png"
+            screenshot_path = f"./{name}-{user_id}-{now}"+".png"
             # element.screenshot(f"./{name}-{now}"+".png")
             element.screenshot(screenshot_path)
 
@@ -324,7 +352,10 @@ class Scraper:
 
 if __name__ == '__main__':
     scraper = Scraper()
-    # scraper.single_exams_schedule()
-    # scraper.find_exact_exams_venue("ugbs303", 10953871)
-    scraper.all_courses_schedule("ugbs303, dcit303, ABCS342")
+    user_id = "123456789"
+    ID = 10953881
+    # scraper.single_exams_schedule("dcit303", user_id)
+    scraper.find_exact_exams_venue("ugbs303", user_id, ID)
+    # scraper.find_exact_exams_venue("dcit303", user_id, ID)
+    # scraper.all_courses_schedule("ugbs303, dcit303, ABCS342", user_id, ID)
     scraper.cleanup()

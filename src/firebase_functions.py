@@ -140,11 +140,12 @@ def get_exact_venue(user_id: str, course):
                 f"Exact exams venue -- {exact_exams_venue}")
             return exact_exams_venue
         else:
-            logger.info(f"No exams venue found for user ID: {user_id}")
+            logger.info(f"Exact venue Not found for course: {course}")
             return None
     except Exception as e:
         logger.exception(
             f"Error getting exact exams venue for user ID {user_id}: {e}")
+        return None
 
 
 def delete_exams_details(user_id: str, course: str) -> None:
@@ -170,5 +171,5 @@ if __name__ == "__main__":
     # get_saved_exams_details(user_id)
     # get_exams_venue(user_id)
     # get_course_code(user_id)
-    # delete_exams_details(
-    #     user_id, "UGBS303 - COMPUTER APPLICATIONS IN MANAGEMENT")
+    delete_exams_details(
+        user_id, "UGBS303 - COMPUTER APPLICATIONS IN MANAGEMENT")
