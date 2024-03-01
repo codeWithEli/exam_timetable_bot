@@ -1,6 +1,6 @@
 """ firebase helper functions"""
 import logging
-import os
+import re
 
 import firebase_admin
 from firebase_admin import credentials
@@ -33,22 +33,16 @@ except Exception as e:
 
 
 def get_course_code(user_id: str) -> str:
-    """
-    Retrieves the course code for the given user ID from Firestore.
-
-    Args:
-        user_id: The user ID to retrieve the course code for.
-
-    Returns:
-        The course code if found, otherwise None.
-    """
 
     try:
         doc_ref = db.collection('users').document(str(user_id))
         doc = doc_ref.get()
 
         if doc.exists:
-            return doc.get('course_name')
+            course_code = doc.get('user_entered_course_code')
+            logger.info(
+                f"User_entered_course_code --- {course_code}")
+            return course_code
         else:
             logger.info(f"No course code found for user ID: {user_id}")
             return None
@@ -56,22 +50,125 @@ def get_course_code(user_id: str) -> str:
     except Exception as e:
         logger.exception(
             f"Error retrieving course code for user ID {user_id}: {e}")
-        return None  # Indicate failure by returning None
+        return None
 
 
 def set_course_code(user_id: str, course_code: str) -> None:
-    """
-    Sets the course code for the given user ID in Firestore.
-
-    Args:
-        user_id: The user ID to set the course code for.
-        course_code: The course code to set.
-    """
 
     try:
-        db.collection('users').document(str(user_id)).set(
-            {'course_name': course_code})
+        db.collection('users').document(str(user_id)).update(
+            {'user_entered_course_code': course_code})
 
     except Exception as e:
         logger.exception(
             f"Error setting course code for user ID {user_id}: {e}")
+
+
+def get_saved_exams_details(user_id: str) -> dict:
+
+    doc_ref = db.collection('users').document(user_id)
+    try:
+        doc = doc_ref.get()
+        if doc.exists:
+            exams_details = doc.to_dict()
+            logger.info(f"Exams details -- {exams_details}")
+            return exams_details
+        else:
+            logger.info('No such document!')
+    except Exception as e:
+        logger.error(f'Error getting exams details: {e}')
+
+
+def save_exams_details(user_id: str, course: str, date: str, time: str, venue) -> None:
+    sanitized_course = re.sub(r'\W+', '_', course)
+
+    try:
+        db.collection('users').document(user_id).update({
+            sanitized_course: {'Full_Course_Name': course,
+                               'Exams_Date': date,
+                               'Exams_Time': time,
+                               'All_Exams_Venue': venue
+                               }
+        })
+        logger.info(f"Exams details for {sanitized_course} saved to firebase")
+    except Exception as e:
+        logger.exception(
+            f"Error setting exams details for {'users'}: {e}")
+
+
+def get_exams_venue(user_id: str) -> str:
+
+    try:
+        doc_ref = db.collection('users').document(user_id)
+        doc = doc_ref.get()
+
+        if doc.exists:
+            all_exams_venue = doc.get('All_Exams_Venue')
+            logger.info(
+                f"Retrived venue from firebase -- {all_exams_venue}")
+            return all_exams_venue
+        else:
+            logger.info(f"No exams venue found for user ID: {user_id}")
+            return None
+    except Exception as e:
+        logger.exception(
+            f"Error retrieving exams venue for user ID {user_id}: {e}")
+        return None
+
+
+def set_exact_venue(user_id: str, course, exact_venue: str) -> None:
+    sanitized_course = re.sub(r'\W+', '_', course)
+    try:
+        db.collection('users').document(str(user_id)).update(
+            {f'{sanitized_course}.Exact_Exams_Venue': exact_venue})
+
+    except Exception as e:
+        logger.exception(
+            f"Error setting exact exams venue for user ID {user_id}: {e}")
+
+
+def get_exact_venue(user_id: str, course):
+    sanitized_course = re.sub(r'\W+', '_', course)
+    try:
+        doc_ref = db.collection('users').document(user_id)
+        doc = doc_ref.get()
+
+        if doc.exists:
+            exact_exams_venue = doc.get(
+                f'{sanitized_course}.Exact_Exams_Venue')
+            logger.info(
+                f"Exact exams venue -- {exact_exams_venue}")
+            return exact_exams_venue
+        else:
+            logger.info(f"No exams venue found for user ID: {user_id}")
+            return None
+    except Exception as e:
+        logger.exception(
+            f"Error getting exact exams venue for user ID {user_id}: {e}")
+
+
+def delete_exams_details(user_id: str, course: str) -> None:
+    sanitized_course = re.sub(r'\W+', '_', course)
+
+    try:
+        db.collection('users').document(user_id).update({
+            sanitized_course: firestore.DELETE_FIELD
+        })
+        logger.info(f"{sanitized_course} exams details DELETED!!")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+if __name__ == "__main__":
+    user_id = "123456789"
+    # set_course_code(user_id, "UGBS303")
+    # save_exams_details(user_id, "UGBS303 - COMPUTER APPLICATIONS IN MANAGEMENT", "01 March 2024",
+    #                  "02:32 pm", "UGCS LAB 3 MAIN")
+    # set_exact_venue(
+    #     user_id, "UGBS303_COMPUTER_APPLICATIONS_IN_MANAGEMENT", "UGCS LAB 3 MAIN")
+    # get_exact_venue(user_id, "UGBS303 - COMPUTER APPLICATIONS IN MANAGEMENT")
+    # get_saved_exams_details(user_id)
+    # get_exams_venue(user_id)
+    # get_course_code(user_id)
+    # delete_exams_details(
+    #     user_id, "UGBS303 - COMPUTER APPLICATIONS IN MANAGEMENT")
