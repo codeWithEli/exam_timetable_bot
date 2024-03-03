@@ -40,11 +40,10 @@ def get_course_code(user_id: str) -> str:
 
         if doc.exists:
             course_code = doc.get('user_entered_course_code')
-            logger.info(
-                f"User_entered_course_code --- {course_code}")
             return course_code
         else:
-            logger.info(f"No course code found for user ID: {user_id}")
+            logger.info(
+                f"No course code found in firebase for user ID: {user_id}")
             return None
 
     except Exception as e:
@@ -71,7 +70,7 @@ def get_saved_exams_details(user_id: str) -> dict:
         doc = doc_ref.get()
         if doc.exists:
             exams_details = doc.to_dict()
-            logger.info(f"Exams details -- {exams_details}")
+            logger.info(f"GOT all exams details")
             return exams_details
         else:
             logger.info('No such document!')
@@ -136,11 +135,10 @@ def get_exact_venue(user_id: str, course):
         if doc.exists:
             exact_exams_venue = doc.get(
                 f'{sanitized_course}.Exact_Exams_Venue')
-            logger.info(
-                f"Exact exams venue -- {exact_exams_venue}")
             return exact_exams_venue
         else:
-            logger.info(f"Exact venue Not found for course: {course}")
+            logger.info(
+                f"Exact venue Not found in firebase for course: {course}")
             return None
     except Exception as e:
         logger.exception(
@@ -148,16 +146,17 @@ def get_exact_venue(user_id: str, course):
         return None
 
 
-def delete_exams_details(user_id: str, course: str) -> None:
-    sanitized_course = re.sub(r'\W+', '_', course)
+def delete_exams_details(user_id: str) -> None:
 
     try:
-        db.collection('users').document(user_id).update({
-            sanitized_course: firestore.DELETE_FIELD
-        })
-        logger.info(f"{sanitized_course} exams details DELETED!!")
+        courses = get_saved_exams_details(user_id).keys()
+        for course in courses:
+            db.collection('users').document(user_id).update({
+                f"{course}": firestore.DELETE_FIELD
+            })
+        logger.info(f"All exams details DELETED!!")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred when deleting: {e}")
 
 
 if __name__ == "__main__":
@@ -172,4 +171,4 @@ if __name__ == "__main__":
     # get_exams_venue(user_id)
     # get_course_code(user_id)
     delete_exams_details(
-        user_id, "UGBS303 - COMPUTER APPLICATIONS IN MANAGEMENT")
+        user_id)
