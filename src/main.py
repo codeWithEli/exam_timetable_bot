@@ -34,7 +34,7 @@ app = Flask(__name__)
 bot.remove_webhook()
 URL = os.environ['RENDER_URL']
 ngrok_URL = os.environ['NGROK']
-bot.set_webhook(url=ngrok_URL)
+bot.set_webhook(url=URL)
 
 
 @app.route('/', methods=['POST'])
