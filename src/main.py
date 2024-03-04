@@ -35,7 +35,7 @@ bot.remove_webhook()
 URL = os.environ['RENDER_URL']
 SECRET = os.environ['SECRET']
 ngrok = 'https://4ab7-154-160-21-110.ngrok-free.app'
-bot.set_webhook(url=ngrok)
+bot.set_webhook(url=URL)
 
 
 @app.route('/', methods=['POST'])
