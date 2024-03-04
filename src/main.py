@@ -33,9 +33,8 @@ app = Flask(__name__)
 
 bot.remove_webhook()
 URL = os.environ['RENDER_URL']
-SECRET = os.environ['SECRET']
 ngrok_URL = os.environ['NGROK']
-bot.set_webhook(url=URL)
+bot.set_webhook(url=ngrok_URL)
 
 
 @app.route('/', methods=['POST'])
@@ -262,8 +261,20 @@ def handle_all_course(message):
         courses = message.text
         cleaned_courses = courses.upper().replace(" ", "").split(",")
         user_courses = ", ".join(cleaned_courses)
-        bot.send_message(
+
+        # all_course_search_msg = bot.send_message(
+        #     user_id, f" Please enter your Student ID to retrieve the exact exams venue for all courses. If you prefer to skip this step, simply type NO. 😊")
+        # all_course_search_msg_id = all_course_search_msg.message_id
+
+        # ID = None
+        # reply = message.text
+        # no_id_reply = ['NO', 'no', 'No', 'N', 'nO', 'n']
+        # if reply not in no_id_reply:
+        #     ID = reply
+
+        searching_all_courses = bot.send_message(
             user_id, f"🔍 Searching for {user_courses} ")
+        searching_all_courses_id = searching_all_courses.message_id
 
         send_sticker = bot.send_sticker(user_id, sticker_id)
         sticker_message_id = send_sticker.message_id
@@ -272,8 +283,9 @@ def handle_all_course(message):
         screenshot_path, unavailable_courses = scraper.all_courses_schedule(
             courses, user_id)
 
-        # Delete sticker
-        bot.delete_message(user_id, sticker_message_id)
+        # Delete sticker and searching msg
+        bot.delete_messages(
+            user_id, [sticker_message_id, searching_all_courses_id])
 
         # Send and delete photo
         with open(screenshot_path, 'rb') as screenshot:
@@ -283,11 +295,19 @@ def handle_all_course(message):
         if len(unavailable_courses) > 0:
             not_found_courses = ", ".join(unavailable_courses)
             bot.send_message(
-                user_id, f"Unavailable: {not_found_courses} ❗️❗️ Please double-check the course code \n\nIts possible that these courses have not yet been uploaded to the site 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
+                user_id, f"Unavailable: {not_found_courses} ❗️❗️ Please double-check the course code \n\nIts possible that these courses have not yet been uploaded to the UG website 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
             )
 
     except Exception as e:
         logger.error(str(e))
+        msg = "⚠️ An error occurred ⚠️ \nIf this issue persists, please contact the developer @eli_bigman for assistance. 🙏 "
+        # Del sticker and msg
+        bot.delete_messages(
+            user_id, [sticker_message_id, searching_all_courses_id])
+        # Send error msg
+        bot.send_message(
+            user_id, msg)
+        raise
 
 
 @bot.callback_query_handler(func=lambda call: True)
