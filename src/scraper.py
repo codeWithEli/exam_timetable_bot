@@ -163,16 +163,13 @@ class Scraper:
             self.get_batch(course_code)
             if len(self.batch_list) > 0:
                 self.click_generate()
-
-                # save exams details to firebase
-                # self.get_exams_detail(user_id, ID=None)
                 return self.take_screenshot(user_id, course_code)
             else:
                 logger.info(f"{course_code} Not found !!")
                 return None
 
         except (NoSuchElementException):
-            logger.error("Single exams schedulelement not found")
+            logger.error("Single exams schedule element not found")
             return None
 
         except Exception as e:
@@ -184,7 +181,7 @@ class Scraper:
             self.click_schedule_gen()
             self.get_batch(course_code)
             self.click_generate()
-            self.get_exams_detail(user_id, ID)
+            self.exams_detail(user_id, ID)
 
             return self.take_screenshot(user_id, course_code)
 
@@ -217,11 +214,11 @@ class Scraper:
 
             self.click_generate()
 
-            self.get_exams_detail(user_id, ID)
+            self.exams_detail(user_id, ID)
             logger.info(
                 f'Not available on UG timetable website Yet: {self.unavailable_courses}')
 
-            return self.take_screenshot("Exams_Schedule"), self.unavailable_courses
+            return self.take_screenshot(user_id, "Exams_Schedule"), self.unavailable_courses
 
         except (NoSuchElementException):
             logger.error("all_course_schedule element NOT FOUND")
@@ -230,8 +227,11 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def exact_exam_venue(self, e_venues, ID=None):
+    def exact_exam_venue(self, user_id, course, e_venues, ID: None | int):
         try:
+            no_id_venues = []
+            exam_venue = ""
+
             for venue in e_venues:
                 id_range_text = venue.find_element(
                     By.TAG_NAME, "span").text
@@ -255,23 +255,23 @@ class Scraper:
                         return exam_venue
                     else:
                         logger.info("ID not in range")
-                        # FB.set_exact_venue(user_id, course, exam_venue=None)
                         return None
 
                 elif id_range_text == "" and ID is not None:
-                    logger.info(f"Exact venue for {ID} not FOUND")
-                    # FB.set_exact_venue(user_id, course, exam_venue=None)
-                    return None
+                    no_id_venue = venue.text.split("|")[0]
+                    no_id_venues.append(no_id_venue)
+                    FB.set_no_id_venues(user_id, course, no_id_venues)
+                    logger.info(
+                        f"Found venue without ID attached -- {no_id_venues}")
 
                 else:
-                    logger.info("Returning all venues")
-                    # FB.set_exact_venue(user_id, course, exam_venue=None)
                     return None
 
         except Exception as e:
-            logger.error(str(e))
+            logger.error(f'Getting exact exams venue error - {str(e)}')
+            return None
 
-    def get_exams_detail(self, user_id: str, ID=None):
+    def exams_detail(self, user_id: str, ID=None):
         try:
 
             rows = self.wait.until(
@@ -292,23 +292,18 @@ class Scraper:
                         # Get all venues
                         all_venues.append(venue.text)
 
-                    if ID != None:
-                        exact_venue = self.exact_exam_venue(e_venues, ID)
-
                     FB.save_exams_details(user_id, e_course,
                                           e_date, e_time, all_venues)
-                    FB.set_exact_venue(user_id, e_course, exact_venue)
-                    logger.info(
-                        f"""
+                    logger.info(f"Saved exams details to firebase ✅")
 
-                    Course Name : {e_course}
-                    Exams Date : {e_date}
-                    Exams Time : {e_time}
-                    Exams Venue : {all_venues}
+                    if ID != None:
+                        exact_venue = self.exact_exam_venue(user_id, e_course,
+                                                            e_venues, ID)
+                        FB.set_exact_venue(user_id, e_course, exact_venue)
+                        logger.info(
+                            f"Exact venue and no id venues saved to firebase ✅")
 
-                    """)
-
-            return  # get_saved_exams_details(user_id)
+            return
 
         except (NoSuchElementException):
             logger.error("No such element")
@@ -353,9 +348,9 @@ class Scraper:
 if __name__ == '__main__':
     scraper = Scraper()
     user_id = "123456789"
-    ID = 10953881
+    ID = 10963881
     # scraper.single_exams_schedule("dcit303", user_id)
-    scraper.find_exact_exams_venue("ugbs303", user_id, ID)
-    # scraper.find_exact_exams_venue("dcit303", user_id, ID)
-    # scraper.all_courses_schedule("ugbs303, dcit303, ABCS342", user_id, ID)
+    # scraper.find_exact_exams_venue("ugbs303", user_id, ID)
+    # scraper.find_exact_exams_venue("ugrc210", user_id, ID)
+    scraper.all_courses_schedule("ugbs303, dcit303, ugrc210", user_id, ID)
     scraper.cleanup()
