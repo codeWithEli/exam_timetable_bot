@@ -146,6 +146,42 @@ def get_exact_venue(user_id: str, course):
         return None
 
 
+def set_no_id_venues(user_id: str, course: str, no_id_venue: list):
+    try:
+        sanitized_course = re.sub(r'\W+', '_', course)
+        # doc_ref = db.collection('users').document(user_id)
+        # doc = doc_ref.get()
+        if len(no_id_venue) > 0:
+
+            db.collection('users').document(user_id).update({
+                f'{sanitized_course}.No_ID_Venues': no_id_venue
+            })
+        else:
+            db.collection('users').document(user_id).update({
+                f'{sanitized_course}.No_ID_Venues': None
+            })
+
+    except Exception as e:
+        logger.error(str(e))
+
+
+def get_no_id_venues(user_id: str, course: str) -> list | None:
+    try:
+        sanitized_course = re.sub(r'\W+', '_', course)
+        doc_ref = db.collection('users').document(user_id)
+        doc = doc_ref.get()
+
+        if doc.exists:
+            no_id_venue = doc.get(f'{sanitized_course}.No_ID_Venues')
+            logger.info("Got no_id_venues ✅")
+            return no_id_venue
+        else:
+            return None
+
+    except Exception as e:
+        logger.error(f"Error getting no_id_venues \n {e}")
+
+
 def delete_exams_details(user_id: str) -> None:
 
     try:
