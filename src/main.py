@@ -3,6 +3,7 @@ import re
 import logging
 import dotenv
 import scraper
+from flask import Flask, request
 
 import telebot
 from telebot import types
@@ -26,6 +27,23 @@ scraper = scraper.Scraper()
 
 global sticker_id
 sticker_id = "CAACAgUAAxkBAAICWmXNVFmPZfVnlRYbCiLoaC6Ayz80AAJ1AgACrO6pVuBDnskq_U5QNAQ"
+
+# Set up flask webhook
+app = Flask(__name__)
+
+bot.remove_webhook()
+URL = os.environ['RENDER_URL']
+SECRET = os.environ['SECRET']
+ngrok = 'https://4ab7-154-160-21-110.ngrok-free.app'
+bot.set_webhook(url=ngrok)
+
+
+@app.route('/', methods=['POST'])
+def webhook():
+    updates = telebot.types.Update.de_json(
+        request.stream.read().decode("utf-8"))
+    bot.process_new_updates([updates])
+    return "ok", 200
 
 
 @bot.message_handler(commands=['start'])
@@ -292,4 +310,4 @@ def default_handler(message):
 
 if __name__ == "__main__":
     logger.info('Bot is running...')
-    bot.infinity_polling()
+    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5001)))
