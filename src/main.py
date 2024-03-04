@@ -3,10 +3,12 @@ import re
 import logging
 import dotenv
 import scraper
-
+from flask import Flask, request
 
 import telebot
 from telebot import types
+
+import firebase_functions as FB
 
 # Configure logger
 logging.basicConfig(
@@ -26,8 +28,21 @@ scraper = scraper.Scraper()
 global sticker_id
 sticker_id = "CAACAgUAAxkBAAICWmXNVFmPZfVnlRYbCiLoaC6Ayz80AAJ1AgACrO6pVuBDnskq_U5QNAQ"
 
-global course_code
-course_code = None
+# Set up flask webhook
+app = Flask(__name__)
+
+bot.remove_webhook()
+URL = os.environ['RENDER_URL']
+ngrok_URL = os.environ['NGROK']
+bot.set_webhook(url=ngrok_URL)
+
+
+@app.route('/', methods=['POST'])
+def webhook():
+    updates = telebot.types.Update.de_json(
+        request.stream.read().decode("utf-8"))
+    bot.process_new_updates([updates])
+    return "ok", 200
 
 
 @bot.message_handler(commands=['start'])
@@ -40,7 +55,7 @@ Hello {message.from_user.username} 👋,
 Welcome to the UG Exams Timetable Bot! 🤖
 This bot is designed to assist University of Ghana students 🎓 in finding their exam venues with ease. 
 
-You can search for any course or multiple courses at any time. To search for multiple courses, simply separate each course with a comma. For example: MATH101, CHEM102, PHYS103
+You can search for any course or multiple courses at any time. To search for multiple courses, simply separate each course with a comma. For example: ugbs303, dcit102, ugrc210
 
 Get your exam date 📅, time ⏰, and venue 📍 instantly. Just type in your course code(s) and let the bot do the rest!
 
@@ -58,13 +73,13 @@ def help_command(message):
 Hello {message.from_user.username} 👋,
 Here's how you can use the UG Exams Timetable Bot! 🤖
 
-1. Start by searching for your course using its code. For example, you can type MATH101 to search for the MATH101 course.
+1. Start by searching for your course using its code. For example, you can type ugbs303 to search for the ugrc210 course.
 
-2. If you want to search for multiple courses at once, simply separate each course code with a comma. For example: MATH101, CHEM102, PHYS103, FLAW104
+2. If you want to search for multiple courses at once, simply separate each course code with a comma. For example: ugbs303, dcit102, math306, flaw104
 
 3. The bot will return your exam date 📅, time ⏰, and venue 📍 instantly.
 
-Remember, you can always type /start to get a welcome message, /about to learn more about this bot or /help to get help.
+Remember, you can always type /start to get a welcome message, /about to learn more about this bot or /help to get this help message.
 
 Happy studying and good luck with your exams! 📚🍀
         """
@@ -89,27 +104,37 @@ Enjoy using the bot! 💯"""
 
 
 @bot.message_handler(func=lambda message: re.match(r'^[A-Za-z]{4}\s?\d{3}$', message.text))
-def handle_course_code(message):
+def handle_single_course_code(message):
     try:
-        global course_code
+
+        user_id = str(message.chat.id)
+
         course_code = message.text.upper().replace(" ", "")
-        bot.send_message(
-            message.chat.id, f"🔍 Searching for {course_code}...🚀")
+
+        # Delete previous data from firebase
+        FB.delete_exams_details(user_id)
+
+        # Update course code for user
+        FB.set_course_code(user_id, course_code)
+
+        searching_course_msg = bot.send_message(
+            user_id, f"🔍 Searching for {course_code}...🚀")
+        searching_course_msg_id = searching_course_msg.message_id
 
         # sending sticker
-
-        send_sticker = bot.send_sticker(message.chat.id, sticker_id)
+        send_sticker = bot.send_sticker(user_id, sticker_id)
         sticker_message_id = send_sticker.message_id
 
         # Get screenshot for a single exams
-        screenshot_path = scraper.single_exams_schedule(course_code)
+        screenshot_path = scraper.single_exams_schedule(course_code, user_id)
 
-        # Del sticker
-        bot.delete_message(message.chat.id, sticker_message_id)
+        # Del searching message and sticker
+        bot.delete_messages(
+            user_id, [searching_course_msg_id, sticker_message_id])
 
         if screenshot_path is None:
             bot.send_message(
-                message.chat.id, f"Couldn't find {course_code} ❗️❗️❗️\nPlease double-check the course codes\n\nIts possible that this course has not yet been uploaded to the site 🌐\n( https://sts.ug.edu.gh/timetable/ ) \ntry searching for them at a later time ⏰")
+                user_id, f"Couldn't find {course_code} ❗️❗️❗️\nPlease double-check the course codes\n\nIts possible that this course has not yet been uploaded to the site 🌐\n( https://sts.ug.edu.gh/timetable/ ) \ntry searching for them at a later time ⏰")
             return
 
         else:
@@ -117,101 +142,192 @@ def handle_course_code(message):
             markup.add(types.InlineKeyboardButton(
                 "📍 Get Exact Venue", callback_data='get_exact_venue'))
             # markup.add(types.InlineKeyboardButton(
-            #     "🗓 Create a remmider", callback_data='get_exact_venue'))
+            #     "🗓 Create a remmider", callback_data='get_calendar'))
 
             # Send and delete photo
             with open(screenshot_path, 'rb') as screenshot:
-                bot.send_photo(message.chat.id, screenshot)
-            bot.send_message(message.chat.id, "I can also help you 👇👇👇👇👇👇",
+                bot.send_photo(user_id, screenshot)
+            bot.send_message(user_id, "I can also help you with 👇👇👇👇",
                              reply_markup=markup)
             os.remove(screenshot_path)
     except Exception as e:
         logger.info(str(e))
+        msg = "⚠️ An error occurred ⚠️ \nIf this issue persists, please contact the developer @eli_bigman for assistance. 🙏 "
+        # Del sticker and msg
+        bot.delete_messages(
+            user_id, [sticker_message_id, searching_course_msg])
+        # Send error msg
+        bot.send_message(
+            user_id, msg)
+        raise
 
 
 @bot.message_handler(func=lambda message: re.match(r'^\d{8}$', message.text))
 def handle_id(message):
     try:
-        global course_code
 
-        ID = int(message.text)
+        user_id = str(message.chat.id)
 
-        bot.send_message(message.chat.id, "Searching for your venue... 🔍")
+        user_entered_course_code = FB.get_course_code(user_id)
 
-        send_sticker = bot.send_sticker(message.chat.id, sticker_id)
-        sticker_message_id = send_sticker.message_id
+        if user_entered_course_code is not None and message.text:
+            course_code = user_entered_course_code
 
-        # Get venue and screenshot
-        venue, screenshot_path = scraper.find_exact_exams_venue(
-            course_code=course_code, ID=ID)
+            ID = int(message.text)
 
-        # Del sticker
-        bot.delete_message(message.chat.id, sticker_message_id)
+            # Send message
+            searching_venue_msg = bot.send_message(
+                user_id, "Searching for your venue... 🔍")
+            searching_venue_msg_id = searching_venue_msg.message_id
 
-        if venue is None:
-            bot.send_message(
-                message.chat.id, f"😞 NO EXAMS VENUE FOUND❗❗\n\n {ID} \n\n Please check the ID and try agian 🔄")
+            # Send sticker
+            send_sticker = bot.send_sticker(user_id, sticker_id)
+            sticker_message_id = send_sticker.message_id
+
+            # Get venue and screenshot
+            screenshot_path = scraper.find_exact_exams_venue(
+                course_code=course_code, user_id=user_id, ID=ID)
+
+            # Get exact exams venue from firebase
+            courses = list(FB.get_saved_exams_details(user_id).keys())
+
+            # remove user_entered_course_code key from courses dict
+            key_to_remove = 'user_entered_course_code'
+            if key_to_remove in courses:
+                courses.remove(key_to_remove)
+
+            # get exact venue from firebase handling cases where batch of courses exist
+            exact_venue_list = []
+
+            for course_name in courses:
+                exact_venue_list.append(
+                    FB.get_exact_venue(user_id, course_name))
+                no_id_venues = FB.get_no_id_venues(user_id, course_name)
+
+            # Del sticker
+            bot.delete_messages(
+                user_id, [sticker_message_id, searching_venue_msg_id])
+
         else:
-            bot.send_message(
-                message.chat.id, f"{course_code} venue for ID: {ID} is \n\n📍 {venue} 📍\n\nBest of luck! 🌟")
-            with open(screenshot_path, 'rb') as screenshot:
-                bot.send_photo(message.chat.id, screenshot)
-            os.remove(screenshot_path)
+            bot.send_message(user_id, "⚠ Please search for a course first")
+            logger.info('No course code found')
+            FB.set_course_code(user_id, None)
+            return
+
+        for exact_venue in exact_venue_list:
+            if exact_venue is not None:
+                bot.send_message(
+                    user_id, f"{course_code} exams venue for ID {ID} is:\n\n📍 {exact_venue} 📍\n\nBest of luck! 🌟")
+                with open(screenshot_path, 'rb') as screenshot:
+                    bot.send_photo(user_id, screenshot)
+
+                logger.info("FOUND EXACT VENUE ✅")
+
+            elif no_id_venues is not None and exact_venue is None:
+                bot.send_message(
+                    user_id, f"EXACT EXAMS VENUE FOR {ID} NOT FOUND❗❗\n `Possible venue ⏬⏬\n\nVenues without ID: {('|'.join(no_id_venues))}\n\nPlease check the ID and try agian 🔄")
+
+            else:
+                bot.send_message(
+                    user_id, f"😞 EXACT EXAMS VENUE NOT FOUND FOR❗❗\n\n {ID} \n\n Please check the ID and try agian 🔄")
+
+        # Delete screenshot
+        os.remove(screenshot_path)
+        # Set course code to None
+        FB.set_course_code(user_id, None)
+
     except Exception as e:
+        msg = "⚠️ An error occurred ⚠️ \nIf this issue persists, please contact the developer @eli_bigman for assistance. 🙏 "
         logger.exception(str(e))
+        # Del sticker and msg
+        bot.delete_messages(
+            user_id, [sticker_message_id, searching_venue_msg_id])
+        # Send error msg
+        bot.send_message(
+            user_id, msg)
+        raise
 
 
 @bot.message_handler(func=lambda message: re.match(r'\b([a-zA-Z]{4}\d{3},\s?)*[a-zA-Z]{4}\d{3}\b', message.text))
 def handle_all_course(message):
 
     try:
+
+        user_id = str(message.chat.id)
+
+        # Delete previous data from firebase
+        FB.delete_exams_details(user_id)
+
         courses = message.text
         cleaned_courses = courses.upper().replace(" ", "").split(",")
         user_courses = ", ".join(cleaned_courses)
-        bot.send_message(
-            message.chat.id, f"🔍 Searching for {user_courses} ")
 
-        send_sticker = bot.send_sticker(message.chat.id, sticker_id)
+        # all_course_search_msg = bot.send_message(
+        #     user_id, f" Please enter your Student ID to retrieve the exact exams venue for all courses. If you prefer to skip this step, simply type NO. 😊")
+        # all_course_search_msg_id = all_course_search_msg.message_id
+
+        # ID = None
+        # reply = message.text
+        # no_id_reply = ['NO', 'no', 'No', 'N', 'nO', 'n']
+        # if reply not in no_id_reply:
+        #     ID = reply
+
+        searching_all_courses = bot.send_message(
+            user_id, f"🔍 Searching for {user_courses} ")
+        searching_all_courses_id = searching_all_courses.message_id
+
+        send_sticker = bot.send_sticker(user_id, sticker_id)
         sticker_message_id = send_sticker.message_id
 
         # Getting course details
         screenshot_path, unavailable_courses = scraper.all_courses_schedule(
-            courses)
+            courses, user_id)
 
-        # Delete sticker
-        bot.delete_message(message.chat.id, sticker_message_id)
+        # Delete sticker and searching msg
+        bot.delete_messages(
+            user_id, [sticker_message_id, searching_all_courses_id])
 
         # Send and delete photo
         with open(screenshot_path, 'rb') as screenshot:
-            bot.send_photo(message.chat.id, screenshot)
+            bot.send_photo(user_id, screenshot)
         os.remove(screenshot_path)
 
         if len(unavailable_courses) > 0:
             not_found_courses = ", ".join(unavailable_courses)
             bot.send_message(
-                message.chat.id, f"Unavailable: {not_found_courses} ❗️❗️ Please double-check the course code \n\nIts possible that these courses have not yet been uploaded to the site 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
+                user_id, f"Unavailable: {not_found_courses} ❗️❗️ Please double-check the course code \n\nIts possible that these courses have not yet been uploaded to the UG website 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
             )
 
     except Exception as e:
         logger.error(str(e))
+        msg = "⚠️ An error occurred ⚠️ \nIf this issue persists, please contact the developer @eli_bigman for assistance. 🙏 "
+        # Del sticker and msg
+        bot.delete_messages(
+            user_id, [sticker_message_id, searching_all_courses_id])
+        # Send error msg
+        bot.send_message(
+            user_id, msg)
+        raise
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
+    user_id = call.message.chat.id
 
-    if call.data == "get_exact_venue" and course_code is None:
-        bot.send_message(call.message.chat.id,
-                         "⚠ Please search for a course first")
-    elif call.data == "get_exact_venue" and course_code is not None:
-        bot.send_message(call.message.chat.id, "📍Please enter your ID")
+    if call.data == "get_exact_venue":
+        if FB.get_course_code(user_id) is None:
+            bot.send_message(user_id,
+                             "⚠ Please search for a course first")
+        else:
+            bot.send_message(user_id, "📍Please enter your ID")
 
 
 @bot.message_handler(func=lambda message: True)
 def default_handler(message):
     bot.send_message(
-        message.chat.id, "Sorry, I didn't understand that 😕 \nPlease enter a valid course code 📚 \nConsiting of 4 letters and 3 numbers like ugrc101 ")
+        message.chat.id, "Oops! 🙈 Let's try that again. Make sure your course code is on point, like ugrc101 (4 letters, 3 numbers). And hey, don't forget, your ID should be atleast 8 numbers long. Got it? Cool! 😎👍 \nIf issue persists contact my developer @eli_bigman")
 
 
 if __name__ == "__main__":
     logger.info('Bot is running...')
-    bot.infinity_polling()
+    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5001)))
