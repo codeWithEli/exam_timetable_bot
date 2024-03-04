@@ -1,7 +1,8 @@
-beautifulsoup4==4.12.3
 python-dotenv==1.0.1
 requests==2.25.1
 selenium==4.17.2
 webdriver-manager==4.0.1
 pyTelegramBotAPI==4.15.4
 firebase-admin==6.4.0
+Flask==3.0.2
+requests==2.25.1
