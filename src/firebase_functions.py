@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 try:
     # Read service account credentials securely using a context manager
-    cred = credentials.Certificate("src/serviceAccount.json")
+    cred = credentials.Certificate("/etc/secrets/serviceAccount.json")
 
     # Initialize Firebase app
     firebase_admin.initialize_app(cred)
