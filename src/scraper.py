@@ -140,7 +140,7 @@ class Scraper:
                 "get_batch connection error..check internet connection")
 
         except Exception as e:
-            logger.error(str(e))
+            logger.error(f'GET_BATCH ERROR: {str(e)}')
 
     def click_generate(self):
         try:
@@ -163,6 +163,7 @@ class Scraper:
             self.get_batch(course_code)
             if len(self.batch_list) > 0:
                 self.click_generate()
+                self.exams_detail(user_id, course_code, ID=None)
                 return self.take_screenshot(user_id, course_code)
             else:
                 logger.info(f"{course_code} Not found !!")
@@ -173,24 +174,24 @@ class Scraper:
             return None
 
         except Exception as e:
-            logger.error(str(e))
+            logger.error(f'SINGLE_EXAMS_SCHEDULE_ERROR: {str(e)}')
             return None
 
-    def find_exact_exams_venue(self, course_code, user_id, ID=None):
-        try:
-            self.click_schedule_gen()
-            self.get_batch(course_code)
-            self.click_generate()
-            self.exams_detail(user_id, ID)
+    # def find_exact_exams_venue(self, course_code, user_id, ID=None):
+    #     try:
+    #         self.click_schedule_gen()
+    #         self.get_batch(course_code)
+    #         self.click_generate()
+    #         self.exams_detail(user_id, ID)
 
-            return self.take_screenshot(user_id, course_code)
+    #         return self.take_screenshot(user_id, course_code)
 
-        except (NoSuchElementException):
-            logger.error("exact_exams_venue element not found")
-            return None, None
-        except Exception as e:
-            logger.error(str(e))
-            return None, None
+    #     except (NoSuchElementException):
+    #         logger.error("exact_exams_venue element not found")
+    #         return None, None
+    #     except Exception as e:
+    #         logger.error(str(e))
+    #         return None, None
 
     def all_courses_schedule(self, all_courses, user_id, ID=None):
         try:
@@ -209,12 +210,12 @@ class Scraper:
 
             logger.info(
                 f'Available course on UG timetable website : {self.available_courses}')
-            for found_courses in self.available_courses:
-                self.get_batch(found_courses)
+            for found_course in self.available_courses:
+                self.get_batch(found_course)
 
             self.click_generate()
 
-            self.exams_detail(user_id, ID)
+            self.exams_detail(user_id, found_course, ID)
             logger.info(
                 f'Not available on UG timetable website Yet: {self.unavailable_courses}')
 
@@ -244,7 +245,8 @@ class Scraper:
                     "arguments[0].setAttribute('style', '');", venue)
 
                 if id_range_text != "" and ID is not None:
-                    if id_range[0] <= ID <= id_range[1]:
+                    logger.info(id_range_text)
+                    if id_range[0] <= int(ID) <= id_range[1]:
                         logger.info(f'Found ID range - {id_range}')
                         exam_venue = venue.text.split("|")[0]
                         self.driver.execute_script(
@@ -254,8 +256,7 @@ class Scraper:
                             f'Found exact exams venue {exam_venue}')
                         return exam_venue
                     else:
-                        logger.info("ID not in range")
-                        return None
+                        logger.info(f"ID {ID} not in range")
 
                 elif id_range_text == "" and ID is not None:
                     no_id_venue = venue.text.split("|")[0]
@@ -271,7 +272,7 @@ class Scraper:
             logger.error(f'Getting exact exams venue error - {str(e)}')
             return None
 
-    def exams_detail(self, user_id: str, ID=None):
+    def exams_detail(self, user_id: str, course_code: str, ID=None):
         try:
 
             rows = self.wait.until(
@@ -294,6 +295,7 @@ class Scraper:
 
                     FB.save_exams_details(user_id, e_course,
                                           e_date, e_time, all_venues)
+                    FB.set_course_code(user_id, e_course, course_code)
                     logger.info(f"Saved exams details to firebase ✅")
 
                     if ID != None:
