@@ -32,14 +32,16 @@ except Exception as e:
     raise  # Re-raise the exception to report the issue
 
 
-def get_course_code(user_id: str) -> str:
+def get_course_code(user_id: str, course) -> str:
 
     try:
+        sanitized_course = re.sub(r'\W+', '_', course)
         doc_ref = db.collection('users').document(str(user_id))
         doc = doc_ref.get()
 
         if doc.exists:
-            course_code = doc.get('user_entered_course_code')
+            course_code = doc.get(
+                f'{sanitized_course}.user_entered_course_code')
             return course_code
         else:
             logger.info(
@@ -52,11 +54,12 @@ def get_course_code(user_id: str) -> str:
         return None
 
 
-def set_course_code(user_id: str, course_code: str) -> None:
+def set_course_code(user_id: str, course, course_code: str) -> None:
 
     try:
+        sanitized_course = re.sub(r'\W+', '_', course)
         db.collection('users').document(str(user_id)).update(
-            {'user_entered_course_code': course_code})
+            {f'{sanitized_course}.user_entered_course_code': course_code})
 
     except Exception as e:
         logger.exception(
@@ -79,9 +82,9 @@ def get_saved_exams_details(user_id: str) -> dict:
 
 
 def save_exams_details(user_id: str, course: str, date: str, time: str, venue) -> None:
-    sanitized_course = re.sub(r'\W+', '_', course)
 
     try:
+        sanitized_course = re.sub(r'\W+', '_', course)
         db.collection('users').document(user_id).update({
             sanitized_course: {'Full_Course_Name': course,
                                'Exams_Date': date,
@@ -116,8 +119,9 @@ def get_exams_venue(user_id: str) -> str:
 
 
 def set_exact_venue(user_id: str, course, exact_venue: str) -> None:
-    sanitized_course = re.sub(r'\W+', '_', course)
+
     try:
+        sanitized_course = re.sub(r'\W+', '_', course)
         db.collection('users').document(str(user_id)).update(
             {f'{sanitized_course}.Exact_Exams_Venue': exact_venue})
 
