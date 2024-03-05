@@ -2,4 +2,4 @@
 src/__pycache__
 logs/
 token.json
-src/serviceAccount.json
+serviceAccount.json
