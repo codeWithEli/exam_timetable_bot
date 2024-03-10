@@ -59,7 +59,7 @@ class Scraper:
 
         self.wait = WebDriverWait(self.driver, 10)
 
-    def click_schedule_gen(self):
+    def click_schedule_gen(self) -> None:
         try:
             schedule_gen_xpath = "/html/body/header/nav/div/div[2]/ul/li[4]/a"
             schedule_gen = self.wait.until(
@@ -69,18 +69,6 @@ class Scraper:
 
         except Exception as e:
             logger.info(str(e))
-
-    def search_course(self, course_code: str):
-        try:
-            search_box_xpath = '//*[@id="3"]/div/div[2]/div/form/div[1]/div/div/span/span[1]/span/ul/li/input'
-
-            self.search_box = self.driver.find_element(
-                By.XPATH, search_box_xpath)
-            self.search_box.click()
-            self.search_box.send_keys(course_code)
-
-        except Exception as e:
-            logger.error(str(e))
 
     def is_course_available(self, course_code) -> bool:
         try:
@@ -97,7 +85,6 @@ class Scraper:
                     return False
                 else:
                     return True
-
         except (NoSuchElementException):
             logger.error("Is_ourse_available Element Not Found")
 
@@ -107,7 +94,19 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def get_batch(self, course_code: str):
+    def search_course(self, course_code: str) -> None:
+        try:
+            search_box_xpath = '//*[@id="3"]/div/div[2]/div/form/div[1]/div/div/span/span[1]/span/ul/li/input'
+
+            self.search_box = self.driver.find_element(
+                By.XPATH, search_box_xpath)
+            self.search_box.click()
+            self.search_box.send_keys(course_code)
+
+        except Exception as e:
+            logger.error(str(e))
+
+    def get_batch(self, course_code: str) -> None:
         try:
 
             self.search_course(course_code)
@@ -142,7 +141,7 @@ class Scraper:
         except Exception as e:
             logger.error(f'GET_BATCH ERROR: {str(e)}')
 
-    def click_generate(self):
+    def click_generate(self) -> None:
         try:
             generate_button_xpath = '//*[@id="sendButton"]'
             generate_button = self.wait.until(
@@ -153,78 +152,6 @@ class Scraper:
         except (NoSuchElementException):
             logger.error('click_generater element Not Found')
 
-        except Exception as e:
-            logger.error(str(e))
-
-    def single_exams_schedule(self, course_code, user_id):
-        try:
-
-            self.click_schedule_gen()
-            self.get_batch(course_code)
-            if len(self.batch_list) > 0:
-                self.click_generate()
-                self.exams_detail(user_id, course_code, ID=None)
-                return self.take_screenshot(user_id, course_code)
-            else:
-                logger.info(f"{course_code} Not found !!")
-                return None
-
-        except (NoSuchElementException):
-            logger.error("Single exams schedule element not found")
-            return None
-
-        except Exception as e:
-            logger.error(f'SINGLE_EXAMS_SCHEDULE_ERROR: {str(e)}')
-            return None
-
-    # def find_exact_exams_venue(self, course_code, user_id, ID=None):
-    #     try:
-    #         self.click_schedule_gen()
-    #         self.get_batch(course_code)
-    #         self.click_generate()
-    #         self.exams_detail(user_id, ID)
-
-    #         return self.take_screenshot(user_id, course_code)
-
-    #     except (NoSuchElementException):
-    #         logger.error("exact_exams_venue element not found")
-    #         return None, None
-    #     except Exception as e:
-    #         logger.error(str(e))
-    #         return None, None
-
-    def all_courses_schedule(self, all_courses, user_id, ID=None):
-        try:
-            self.unavailable_courses = []
-            self.available_courses = []
-            cleaned_courses = all_courses.upper().replace(" ", "").split(',')
-            self.click_schedule_gen()
-
-            logger.info(f'User requested for {cleaned_courses}')
-
-            for course in cleaned_courses:
-                if self.is_course_available(course):
-                    self.available_courses.append(course)
-                else:
-                    self.unavailable_courses.append(course)
-
-            logger.info(
-                f'Available course on UG timetable website : {self.available_courses}')
-            for found_course in self.available_courses:
-                self.get_batch(found_course)
-
-            self.click_generate()
-
-            self.exams_detail(user_id, found_course, ID)
-            logger.info(
-                f'Not available on UG timetable website Yet: {self.unavailable_courses}')
-
-            return self.take_screenshot(user_id, "Exams_Schedule"), self.unavailable_courses
-
-        except (NoSuchElementException):
-            logger.error("all_course_schedule element NOT FOUND")
-        except (TimeoutException):
-            logger.error("Connection Timeout")
         except Exception as e:
             logger.error(str(e))
 
@@ -272,7 +199,7 @@ class Scraper:
             logger.error(f'Getting exact exams venue error - {str(e)}')
             return None
 
-    def exams_detail(self, user_id: str, course_code: str, ID=None):
+    def exams_detail(self, user_id: str, course_code: str, ID=None) -> None:
         try:
 
             rows = self.wait.until(
@@ -315,7 +242,6 @@ class Scraper:
             return None
 
     def take_screenshot(self, user_id: str, name: str) -> str:
-
         try:
             # get date and time
             now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -329,19 +255,82 @@ class Scraper:
             element = self.wait.until(
                 EC.presence_of_element_located((By.XPATH, exams_card_xpath)))
 
-            screenshot_path = f"./{name}-{user_id}-{now}"+".png"
-            # element.screenshot(f"./{name}-{now}"+".png")
+            screenshot_path = f"./{name}-{user_id}-{now}.png"
+            remote_name = f"{name}-{user_id}-{now}"
+
             element.screenshot(screenshot_path)
 
-            # image_url = upload_to_firebase_storage(
-            #     screenshot_path, f"{name}-{now}")
-            # logger.info('Schedule saved')
-            return screenshot_path
+            image_url = FB.upload_to_firebase_storage(
+                screenshot_path, remote_name)
+            logger.info('Schedule saved to firebase')
+
+            return image_url
 
         except (TimeoutException):
             logger.error("take_screenshot timeout")
+            return None
         except Exception as e:
             logger.error(str(e))
+            return None
+
+    def single_exams_schedule(self, course_code, user_id):
+        try:
+
+            self.click_schedule_gen()
+            self.get_batch(course_code)
+            if len(self.batch_list) > 0:
+                self.click_generate()
+                self.exams_detail(user_id, course_code, ID=None)
+                return self.take_screenshot(user_id, course_code)
+            else:
+                logger.info(f"{course_code} Not found !!")
+                return None
+
+        except (NoSuchElementException):
+            logger.error("Single exams schedule element not found")
+            return None
+
+        except Exception as e:
+            logger.error(f'SINGLE_EXAMS_SCHEDULE_ERROR: {str(e)}')
+            return None
+
+    def all_courses_schedule(self, all_courses, user_id, ID=None):
+        try:
+            unavailable_courses = []
+            available_courses = []
+            cleaned_courses = all_courses.upper().replace(" ", "").split(',')
+            self.click_schedule_gen()
+
+            logger.info(f'User requested for {cleaned_courses}')
+
+            for course in cleaned_courses:
+                if self.is_course_available(course):
+                    available_courses.append(course)
+                else:
+                    unavailable_courses.append(course)
+
+            logger.info(
+                f'Available course on UG timetable website : {available_courses}')
+            for found_course in available_courses:
+                self.get_batch(found_course)
+
+            self.click_generate()
+
+            self.exams_detail(user_id, found_course, ID)
+            logger.info(
+                f'Not available on UG timetable website Yet: {unavailable_courses}')
+
+            return self.take_screenshot(user_id, "Exams_Schedule"), unavailable_courses
+
+        except (NoSuchElementException):
+            logger.error("all_course_schedule element NOT FOUND")
+            return None, None
+        except (TimeoutException):
+            logger.error("Connection Timeout")
+            return None, None
+        except Exception as e:
+            logger.error(str(e))
+            return None, None
 
     def cleanup(self):
         self.driver.quit()
