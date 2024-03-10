@@ -4,6 +4,8 @@ import logging
 import dotenv
 import scraper
 from flask import Flask, request
+from waitress import serve
+
 # from prettytable import PrettyTable
 
 import telebot
@@ -129,13 +131,14 @@ def handle_single_course_code(message):
         sticker_message_id = send_sticker.message_id
 
         # Get screenshot for a single exams
-        screenshot_path = scraper.single_exams_schedule(course_code, user_id)
+        image_url = scraper.single_exams_schedule(
+            course_code, user_id)
 
         # Del searching message and sticker
         bot.delete_messages(
             user_id, [searching_course_msg_id, sticker_message_id])
 
-        if screenshot_path is None:
+        if image_url is None:
             bot.send_message(
                 user_id, f"Couldn't find {course_code} ❗️❗️❗️\nPlease double-check the course codes\n\nIts possible that this course has not yet been uploaded to the site 🌐\n( https://sts.ug.edu.gh/timetable/ ) \ntry searching for them at a later time ⏰")
             return
@@ -145,13 +148,10 @@ def handle_single_course_code(message):
             markup.add(types.InlineKeyboardButton(
                 "🗓 Create a remmider", callback_data='get_calendar'))
 
-            # Send and delete photo
-            with open(screenshot_path, 'rb') as screenshot:
-                bot.send_photo(user_id, screenshot)
+            bot.send_photo(user_id, image_url)
             bot.send_message(
-                user_id, f"To find your exact venue 📍 for {course_code}, simply add your ID at the end. \nFor example: {course_code}, 10223159" ,reply_markup=markup)
+                user_id, f"To find your exact venue 📍 for {course_code}, simply add your ID at the end. \nFor example: {course_code}, 10223159  ,reply_markup=markup")
 
-            os.remove(screenshot_path)
             return
 
     except Exception as e:
@@ -200,26 +200,26 @@ def handle_course_with_ID(message):
         sticker_message_id = send_sticker.message_id
 
         # Getting course details
-        screenshot_path, unavailable_courses = scraper.all_courses_schedule(
+        image_url, unavailable_courses = scraper.all_courses_schedule(
             courses, user_id, ID)
 
         # Create table
         # schedule_table = PrettyTable(['Course','Exact Venue', 'No ID Venue'])
 
         # for
+
         # Delete sticker and searching msg
         bot.delete_messages(
             user_id, [sticker_message_id, searching_all_courses_id])
 
         # Send and delete photo
-        with open(screenshot_path, 'rb') as screenshot:
-            bot.send_photo(user_id, screenshot)
-        os.remove(screenshot_path)
+        bot.send_photo(user_id, image_url)
 
+        # Delete screenshot from firebase
         if len(unavailable_courses) > 0:
             not_found_courses = ", ".join(unavailable_courses)
             bot.send_message(
-                user_id, f"Unavailable: {not_found_courses} ❗️❗️ Please double-check the course code \n\nIts possible that these courses have not yet been uploaded to the UG website 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
+                user_id, f"⚠️ Couldn't find : {not_found_courses} ❗️❗️\nPlease double-check the course code \n\nIts possible that these courses have not yet been uploaded to the UG website 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
             )
 
         if ID is None:
@@ -252,9 +252,9 @@ def handle_course_with_ID(message):
 @bot.message_handler(func=lambda message: True)
 def default_handler(message):
     bot.send_message(
-        message.chat.id, f"{message.text} \nOops! 😕 Pls make sure your course code is correct, like ugrc101 (4 letters, 3 numbers). And also, your ID should be atleast 8 numbers long. Got it? Cool! 😎👍 \nLet's try that again.\nIf issue persists contact my developer @eli_bigman")
+        message.chat.id, f"{message.text} \nOops! 😕 Please ensure that your course code consists of 4 letters followed by 3 numbers 📚. Additionally, your ID should be at least 8 numbers long 🔢. Separate them with a comma, like this: ugrc210, 10921287. \nLet's try that again 🔄.\n\nIf this issue persists, please contact my developer @eli_bigman.")
 
 
 if __name__ == "__main__":
     logger.info('Bot is running...')
-    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5001)))
+    serve(app, host="0.0.0.0", port=int(os.environ.get('PORT', 5001)))
