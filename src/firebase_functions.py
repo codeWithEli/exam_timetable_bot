@@ -1,10 +1,11 @@
 """ firebase helper functions"""
 import logging
 import re
+import os
 
 import firebase_admin
 from firebase_admin import credentials
-from firebase_admin import firestore
+from firebase_admin import firestore, storage
 
 # log config
 logging.basicConfig(
@@ -19,17 +20,18 @@ try:
     cred = credentials.Certificate("./serviceAccount.json")
 
     # Initialize Firebase app
-    firebase_admin.initialize_app(cred)
+    firebase_admin.initialize_app(
+        cred, {"storageBucket": "ug-exams-bot.appspot.com"})
 
     db = firestore.client()
 
 except FileNotFoundError as e:
     logger.error(f"Error loading service account credentials: {e}")
-    raise  # Re-raise the exception to signal failure
+    raise
 
 except Exception as e:
     logger.exception(f"Unexpected error initializing Firebase app: {e}")
-    raise  # Re-raise the exception to report the issue
+    raise
 
 
 def get_course_code(user_id: str, course) -> str:
@@ -131,8 +133,12 @@ def set_exact_venue(user_id: str, course, exact_venue: str) -> None:
 
 
 def get_exact_venue(user_id: str, course):
-    sanitized_course = re.sub(r'\W+', '_', course)
+    """
+    Format course name to be used as dict key
+    Get exact venue value
+    """
     try:
+        sanitized_course = re.sub(r'\W+', '_', course)
         doc_ref = db.collection('users').document(user_id)
         doc = doc_ref.get()
 
@@ -151,6 +157,9 @@ def get_exact_venue(user_id: str, course):
 
 
 def set_no_id_venues(user_id: str, course: str, no_id_venue: list):
+    """
+    Save venues withou iD attached
+    """
     try:
         sanitized_course = re.sub(r'\W+', '_', course)
         # doc_ref = db.collection('users').document(user_id)
@@ -170,6 +179,9 @@ def set_no_id_venues(user_id: str, course: str, no_id_venue: list):
 
 
 def get_no_id_venues(user_id: str, course: str) -> list | None:
+    """
+    Retrive venues without IDs attached
+    """
     try:
         sanitized_course = re.sub(r'\W+', '_', course)
         doc_ref = db.collection('users').document(user_id)
@@ -187,6 +199,9 @@ def get_no_id_venues(user_id: str, course: str) -> list | None:
 
 
 def delete_exams_details(user_id: str) -> None:
+    """
+    Delete saved exams details from user document
+    """
 
     try:
         courses = get_saved_exams_details(user_id).keys()
@@ -197,6 +212,50 @@ def delete_exams_details(user_id: str) -> None:
         logger.info(f"All exams details DELETED!!")
     except Exception as e:
         print(f"An error occurred when deleting: {e}")
+
+
+def upload_to_firebase_storage(local_file_path: str, remote_file_name: str) -> str:
+    """
+    Upload screenschot to firebase 
+    delete local copy and
+    return a public url of the screenshot
+    """
+
+    try:
+        # Upload to firebase storage
+        bucket = storage.bucket()
+        blob = bucket.blob(f"screenshots/{remote_file_name}")
+        blob.upload_from_filename(local_file_path)
+
+        # return public url
+        blob.make_public()
+        public_url = blob.public_url
+
+        # delete local copy
+        os.remove(local_file_path)
+
+        logger.info("Screenshot uploaded to firebase!")
+
+        return public_url
+
+    except Exception as e:
+        logger.exception(f'Upload failed : {str(e)}')
+
+
+def delete_from_firebase_storage(remote_file_name: str):
+    """
+    Delete screenshot from firebase
+    """
+
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(f"screenshots/{remote_file_name}")
+        blob.delete()
+
+        logger.info("Screenshot deleted from firebase!")
+
+    except Exception as e:
+        logger.error(f"Error deleting screenshot - {str(e)}")
 
 
 if __name__ == "__main__":
