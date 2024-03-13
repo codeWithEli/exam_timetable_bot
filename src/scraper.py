@@ -260,7 +260,7 @@ class Scraper:
 
             element.screenshot(screenshot_path)
 
-            image_url = FB.upload_to_firebase_storage(
+            image_url = FB.upload_screenshot_to_firebase(
                 screenshot_path, remote_name)
             logger.info('Schedule saved to firebase')
 
@@ -273,7 +273,7 @@ class Scraper:
             logger.error(str(e))
             return None
 
-    def single_exams_schedule(self, course_code, user_id):
+    def single_exams_schedule(self, course_code, user_id: str):
         try:
 
             self.click_schedule_gen()
@@ -332,7 +332,7 @@ class Scraper:
             logger.error(str(e))
             return None, None
 
-    def cleanup(self):
+    def close(self):
         self.driver.quit()
 
 
