@@ -1,2 +1,4 @@
-URL = "https://sts.ug.edu.gh/timetable"
-TOKEN = ""
+UG_URL = "https://sts.ug.edu.gh/timetable"
+BOT_TOKEN = ""
+PORT = 8000
+WEBHOOK = ""
