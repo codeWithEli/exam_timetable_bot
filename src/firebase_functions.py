@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 try:
     # Read service account credentials securely using a context manager
-    cred = credentials.Certificate("./serviceAccount.json")
+    cred = credentials.Certificate("../serviceAccount.json")
 
     # Initialize Firebase app
     firebase_admin.initialize_app(
@@ -214,7 +214,7 @@ def delete_exams_details(user_id: str) -> None:
         print(f"An error occurred when deleting: {e}")
 
 
-def upload_to_firebase_storage(local_file_path: str, remote_file_name: str) -> str:
+def upload_screenshot_to_firebase(local_file_path: str, remote_file_name: str) -> str:
     """
     Upload screenschot to firebase 
     delete local copy and
@@ -239,8 +239,35 @@ def upload_to_firebase_storage(local_file_path: str, remote_file_name: str) -> s
         return public_url
 
     except Exception as e:
-        logger.exception(f'Upload failed : {str(e)}')
+        logger.exception(f'Upload screenshot failed : {str(e)}')
 
+
+def upload_calendar_to_firebase(local_file_path: str, remote_file_name: str) -> str:
+    """
+    Upload calender.ics file to firebase 
+    delete local copy and
+    return a public url of the screenshot
+    """
+
+    try:
+        # Upload to firebase storage
+        bucket = storage.bucket()
+        blob = bucket.blob(f"calendars/{remote_file_name}")
+        blob.upload_from_filename(local_file_path)
+
+        # return public url
+        blob.make_public()
+        public_url = blob.public_url
+
+        # delete local copy
+        os.remove(local_file_path)
+
+        logger.info("Calendar uploaded to firebase!")
+
+        return public_url
+
+    except Exception as e:
+        logger.exception(f'Upload calendar failed : {str(e)}')
 
 def delete_from_firebase_storage(remote_file_name: str):
     """
@@ -269,5 +296,5 @@ if __name__ == "__main__":
     # get_saved_exams_details(user_id)
     # get_exams_venue(user_id)
     # get_course_code(user_id)
-    delete_exams_details(
-        user_id)
+    #delete_exams_details(
+    #    user_id)
