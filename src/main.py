@@ -4,14 +4,16 @@ import dotenv
 import asyncio
 import re
 
+
 from aiohttp import web
 
 import scraper
 import firebase_functions as FB
+# import alarm
 
 from aiogram import Bot, Dispatcher, Router, types, F, exceptions
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardButton
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -32,7 +34,7 @@ WEB_SERVER_PORT = int(os.environ.get("PORT"))
 
 
 # All handlers should be attached to the Router (or Dispatcher)
-router = Router()
+router = Router(name=__name__)
 
 # Create a bot instance
 bot = Bot(TOKEN)
@@ -44,10 +46,6 @@ scraper = scraper.Scraper()
 sticker_id = "CAACAgUAAxkBAAICWmXNVFmPZfVnlRYbCiLoaC6Ayz80AAJ1AgACrO6pVuBDnskq_U5QNAQ"
 
 
-# Store each user's create calendar buttom id
-create_calendar_buttom_id = {}
-
-
 @router.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     """
@@ -55,15 +53,15 @@ async def command_start_handler(message: Message) -> None:
     """
     await message.answer(
         f"""
-Greetings {message.from_user.username} 👋, Welcome to your Exams Bot! 🤖
+Greetings {message.from_user.username}👋, Welcome to your Exams Bot! 🤖
 
-I am programmed to make your exam scheduling easier. Here's how I can assist you:
+You can search for a single or multiple courses with or without ID
 
-1. Single course search example: \n\nUGRC102 or UGRC102, 10234567
+1. Single course search example: \n\nUGRC102 \nOR \nUGRC102, 10234567
 
-2. Multiple courses search example: \n\nUGBS303, DCIT102, MATH306 or UGBS303, DCIT102, MATH306, 10234567
+2. Multiple courses search example: \n\nUGBS303, DCIT102, MATH306 \nOR \nUGBS303, DCIT102, MATH306, 10234567
 
-3. I will return your exam date 📅, time ⏰, and venue (exact venue) 📍 instantly.
+3. I will return your exams venue (exact venue) 📍, exam date 📅 and time ⏰  instantly from https://sts.ug.edu.gh/timetable/.
 
 Simply input your course code(s) and/or ID, and leave the rest to me!
 
@@ -79,11 +77,13 @@ async def command_help_handler(message: Message) -> None:
 Hello {message.from_user.username}, 
 Here is how to use your Exams Bot! 🤖
 
-1. Single course search example: \n\nugbs303 or ugbs303, 10234567
+You can search for a single or multiple courses with or without ID
+
+1. Single course search example: \n\nUGRC102 \nOR \nUGRC102, 10234567
 
 2. Multiple courses search example: \n\nugbs303, dcit102, math306 \nOR \nugbs303, dcit102, math306, 10234567\n
 
-3. I will return your exam date 📅, time ⏰, and venue (exact venue) 📍 instantly.
+3. I will return your exams venue (exact venue) 📍, exam date 📅 and time ⏰  instantly from https://sts.ug.edu.gh/timetable/.
 
 Remember, you can always type /start to get a welcome message, /about to learn more about me or /help to get this help message.
 
@@ -119,15 +119,8 @@ async def handle_single_course_code(message: types.Message):
         user_id = await get_chat_id(message)
         course_code = await get_course_code(message)
 
-        # Delete create calendar buttom
-        buttom_id = create_calendar_buttom_id.get(user_id)
-        if buttom_id is not None:
-            buttom_id = int(buttom_id)
-            reply_msg = await bot.edit_message_reply_markup(
-                user_id, message_id=buttom_id, reply_markup=None)
-
         searching_course_msg = await bot.send_message(
-            user_id, f" Searching for {course_code}...")
+            user_id, f"🔎 Searching for {course_code}...🚀")
         searching_course_msg_id = searching_course_msg.message_id
 
         # sending sticker
@@ -148,16 +141,16 @@ async def handle_single_course_code(message: types.Message):
             return
 
         else:
-            builder = InlineKeyboardBuilder()
-            builder.button(
-                text="Create a remmider ⏰", callback_data='get_calendar')
+            # Calendar button
+            # builder = InlineKeyboardBuilder()
+            # builder.button(
+            #     text="Create a remmider ⏰", callback_data='get_calendar')
 
-            markup = builder.as_markup()
+            # markup = builder.as_markup()
 
             await bot.send_photo(user_id, image_url)
-            reply_msg = await bot.send_message(
-                user_id, f"To find your exact venue 📍 for {course_code}, simply add your ID at the end. \nFor example: {course_code}, 10223159 📝", reply_markup=markup)
-            create_calendar_buttom_id[user_id] = reply_msg.message_id
+            await bot.send_message(
+                user_id, f"To find your exact venue 📍 for {course_code}, simply add your ID at the end. \nFor example: {course_code}, 10223159 📝")
 
             return
 
@@ -182,12 +175,15 @@ async def handle_course_with_ID(message: types.Message):
     try:
         logger.info(f'User sent --- {message.text}')
         user_id = str(await get_chat_id(message))
+
         # Delete previous data from firebase
-        # FB.delete_exams_details(user_id)
+        FB.delete_exams_details(user_id)
 
         ID = None
         user_search_text = await get_search_text(message)
         student_id = re.findall(r'\d+$', user_search_text)
+
+        # Get student ID from user querry
         if student_id:
             ID = int(student_id[0])
             user_search_text = re.sub(r',\s?\d+', "", user_search_text)
@@ -202,14 +198,15 @@ async def handle_course_with_ID(message: types.Message):
         cleaned_courses = courses.upper().replace(" ", "").split(",")
         user_courses = ", ".join(cleaned_courses)
 
+        # send message and pepe frog sticker
         searching_all_courses = await bot.send_message(
-            user_id, f"🔍 Searching for {user_courses} ")
+            user_id, f"🔎 Searching for {user_courses} 🚀")
         searching_all_courses_id = searching_all_courses.message_id
 
         send_sticker = await bot.send_sticker(user_id, sticker_id)
         sticker_message_id = send_sticker.message_id
 
-        # Getting course details
+        # Get course details
         image_url, unavailable_courses = scraper.all_courses_schedule(
             courses, user_id, ID)
 
@@ -218,22 +215,23 @@ async def handle_course_with_ID(message: types.Message):
             user_id, [sticker_message_id, searching_all_courses_id])
 
         # Create calendar button
-        builder = InlineKeyboardBuilder()
-        builder.button(
-            text="Create a remmider ⏰", callback_data='get_calendar')
+        # builder = InlineKeyboardBuilder()
+        # builder.button(
+        #     text="Create a remmider ⏰", callback_data='get_calendar')
 
-        markup = builder.as_markup()
+        # markup = builder.as_markup()
 
-        # Send and delete photo
-        await bot.send_photo(user_id, image_url, reply_markup=markup)
+        # Send schedule screenshot
+        await bot.send_photo(user_id, image_url)
 
-        # Delete screenshot from firebase
+        # Send unavailable course message
         if len(unavailable_courses) > 0:
             not_found_courses = ", ".join(unavailable_courses)
             await bot.send_message(
                 user_id, f"⚠️ Couldn't find : {not_found_courses} ❗️❗️\nPlease double-check the course code \n\nIts highly possible that these courses have not yet been uploaded to the UG website 🌐 ( https://sts.ug.edu.gh/timetable/ ) try searching for them at a later time ⏰"
             )
 
+        # Send you can add ID message
         if ID is None:
             await bot.send_message(
                 user_id, "Want your exact venue? Simply add your ID at the end of the course code. For example: ugbs303, dcit303, ugrc210, 10223111 ")
@@ -263,26 +261,39 @@ async def get_chat_id(message: types.Message):
     chat_id = str(message.chat.id)
     return chat_id
 
+# Easter egg lol
+
+@router.message(lambda message: message.text.lower() == 'are you up?')
+async def handle_are_you_up(message: types.Message):
+    response = "Who needs sleep when you’re a bot? I’m here and ready to assist! 🌞"
+    await message.reply(response)
+
 
 @router.message()
 async def handle_unmatched_messages(message: types.Message):
-    await message.answer(
+    # Handle any foreign message
+    await message.reply(
         f"""
-{message.text} \nOops! 😕 Please ensure that your course code consists of 4 letters followed by 3 numbers 📚. 
-Additionally, your ID should be at least 8 numbers long 🔢. Separate them with a comma, like this: ugrc210, 10921287.
+Oops! 😕 Please ensure that your course code consists of 4 letters followed by 3 numbers 📚. 
+Additionally, your ID should be at least 8 numbers long 🔢. ❗️Separate them with a comma, like this: ugrc210, 10921287.
 \nLet's try that again 🔄.\n\nIf this issue persists, please contact my developer @eli_bigman
 """)
 
 
 async def on_startup(bot: Bot) -> None:
     try:
+        # Delete and set webhook
+        await bot.delete_webhook(drop_pending_updates=False)
         await bot.set_webhook(f"{BASE_WEBHOOK_URL}")
+
     except exceptions.TelegramRetryAfter as e:
+        # if too many request at a time sleep and try again
         await asyncio.sleep(e.timeout)
         await bot.set_webhook(f"{BASE_WEBHOOK_URL}")
 
 
 def main() -> None:
+    # inialised dispatcher and webhook
     dp = Dispatcher()
     dp.include_router(router)
     dp.startup.register(on_startup)
@@ -294,10 +305,12 @@ def main() -> None:
 
     webhook_requests_handler.register(app, path="/")
     setup_application(app, dp, bot=bot)
+    logger.info(f"WEBHOOK_URL--{BASE_WEBHOOK_URL}")
     web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
 
 
-
 if __name__ == "__main__":
-    logger.info(f"WEBHOOK_URL--{BASE_WEBHOOK_URL}")
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Exams Bot stopped!")
