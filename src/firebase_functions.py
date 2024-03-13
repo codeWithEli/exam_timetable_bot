@@ -26,11 +26,11 @@ try:
     db = firestore.client()
 
 except FileNotFoundError as e:
-    logger.error(f"Error loading service account credentials: {e}")
+    logger.error(f"🔥Error loading service account credentials: {e}")
     raise
 
 except Exception as e:
-    logger.exception(f"Unexpected error initializing Firebase app: {e}")
+    logger.exception(f"🔥Unexpected error initializing Firebase app: {e}")
     raise
 
 
@@ -47,12 +47,12 @@ def get_course_code(user_id: str, course) -> str:
             return course_code
         else:
             logger.info(
-                f"No course code found in firebase for user ID: {user_id}")
+                f"No course code found in firebase for user ID: {user_id} 🔥")
             return None
 
     except Exception as e:
         logger.exception(
-            f"Error retrieving course code for user ID {user_id}: {e}")
+            f"🔥Error retrieving course code for user ID {user_id}: {e}")
         return None
 
 
@@ -65,7 +65,7 @@ def set_course_code(user_id: str, course, course_code: str) -> None:
 
     except Exception as e:
         logger.exception(
-            f"Error setting course code for user ID {user_id}: {e}")
+            f"🔥Error setting course code for user ID {user_id}: {e}")
 
 
 def get_saved_exams_details(user_id: str) -> dict:
@@ -75,12 +75,11 @@ def get_saved_exams_details(user_id: str) -> dict:
         doc = doc_ref.get()
         if doc.exists:
             exams_details = doc.to_dict()
-            logger.info(f"GOT all exams details")
             return exams_details
         else:
             logger.info('No such document!')
     except Exception as e:
-        logger.error(f'Error getting exams details: {e}')
+        logger.error(f'🔥Error getting exams details: {e}')
 
 
 def save_exams_details(user_id: str, course: str, date: str, time: str, venue) -> None:
@@ -94,10 +93,9 @@ def save_exams_details(user_id: str, course: str, date: str, time: str, venue) -
                                'All_Exams_Venue': venue
                                }
         })
-        logger.info(f"Exams details for {sanitized_course} saved to firebase")
     except Exception as e:
         logger.exception(
-            f"Error setting exams details for {'users'}: {e}")
+            f"🔥Error setting exams details for {'users'}: {e}")
 
 
 def get_exams_venue(user_id: str) -> str:
@@ -108,15 +106,13 @@ def get_exams_venue(user_id: str) -> str:
 
         if doc.exists:
             all_exams_venue = doc.get('All_Exams_Venue')
-            logger.info(
-                f"Retrived venue from firebase -- {all_exams_venue}")
             return all_exams_venue
         else:
-            logger.info(f"No exams venue found for user ID: {user_id}")
+            logger.info(f"No exams venue found for user ID: {user_id} 🔥")
             return None
     except Exception as e:
         logger.exception(
-            f"Error retrieving exams venue for user ID {user_id}: {e}")
+            f"🔥Error retrieving exams venue for user ID {user_id}: {e}")
         return None
 
 
@@ -129,7 +125,7 @@ def set_exact_venue(user_id: str, course, exact_venue: str) -> None:
 
     except Exception as e:
         logger.exception(
-            f"Error setting exact exams venue for user ID {user_id}: {e}")
+            f"🔥Error setting exact exams venue for user ID {user_id}: {e}")
 
 
 def get_exact_venue(user_id: str, course):
@@ -148,11 +144,11 @@ def get_exact_venue(user_id: str, course):
             return exact_exams_venue
         else:
             logger.info(
-                f"Exact venue Not found in firebase for course: {course}")
+                f"Exact venue Not found in firebase for course: {course} 🔥")
             return None
     except Exception as e:
         logger.exception(
-            f"Error getting exact exams venue for user ID {user_id}: {e}")
+            f"🔥Error getting exact exams venue for user ID {user_id}: {e}")
         return None
 
 
@@ -175,7 +171,7 @@ def set_no_id_venues(user_id: str, course: str, no_id_venue: list):
             })
 
     except Exception as e:
-        logger.error(str(e))
+        logger.error(f"🔥Error Set no id venue failed -{str(e)}")
 
 
 def get_no_id_venues(user_id: str, course: str) -> list | None:
@@ -189,13 +185,13 @@ def get_no_id_venues(user_id: str, course: str) -> list | None:
 
         if doc.exists:
             no_id_venue = doc.get(f'{sanitized_course}.No_ID_Venues')
-            logger.info("Got no_id_venues ✅")
+            logger.info("Got no_id_venues 🔥")
             return no_id_venue
         else:
             return None
 
     except Exception as e:
-        logger.error(f"Error getting no_id_venues \n {e}")
+        logger.error(f"🔥Error getting no_id_venues \n {e}")
 
 
 def delete_exams_details(user_id: str) -> None:
@@ -209,9 +205,9 @@ def delete_exams_details(user_id: str) -> None:
             db.collection('users').document(user_id).update({
                 f"{course}": firestore.DELETE_FIELD
             })
-        logger.info(f"All exams details DELETED!!")
+        logger.info(f"Previous exams details DELETED!! 🔥")
     except Exception as e:
-        print(f"An error occurred when deleting: {e}")
+        print(f"🔥An error occurred when deleting: {e}")
 
 
 def upload_screenshot_to_firebase(local_file_path: str, remote_file_name: str) -> str:
@@ -234,12 +230,10 @@ def upload_screenshot_to_firebase(local_file_path: str, remote_file_name: str) -
         # delete local copy
         os.remove(local_file_path)
 
-        logger.info("Screenshot uploaded to firebase!")
-
         return public_url
 
     except Exception as e:
-        logger.exception(f'Upload screenshot failed : {str(e)}')
+        logger.exception(f'🔥Upload screenshot failed : {str(e)} ')
 
 
 def upload_calendar_to_firebase(local_file_path: str, remote_file_name: str) -> str:
@@ -262,12 +256,13 @@ def upload_calendar_to_firebase(local_file_path: str, remote_file_name: str) -> 
         # delete local copy
         os.remove(local_file_path)
 
-        logger.info("Calendar uploaded to firebase!")
+        logger.info("Calendar uploaded to firebase!🔥")
 
         return public_url
 
     except Exception as e:
-        logger.exception(f'Upload calendar failed : {str(e)}')
+        logger.exception(f'🔥Upload calendar failed : {str(e)}')
+
 
 def delete_from_firebase_storage(remote_file_name: str):
     """
@@ -282,7 +277,7 @@ def delete_from_firebase_storage(remote_file_name: str):
         logger.info("Screenshot deleted from firebase!")
 
     except Exception as e:
-        logger.error(f"Error deleting screenshot - {str(e)}")
+        logger.error(f"🔥Error deleting screenshot - {str(e)}")
 
 
 if __name__ == "__main__":
@@ -296,5 +291,5 @@ if __name__ == "__main__":
     # get_saved_exams_details(user_id)
     # get_exams_venue(user_id)
     # get_course_code(user_id)
-    #delete_exams_details(
+    # delete_exams_details(
     #    user_id)
