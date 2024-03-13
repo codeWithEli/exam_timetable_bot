@@ -2,8 +2,9 @@ python-dotenv==1.0.1
 requests==2.25.1
 selenium==4.17.2
 webdriver-manager==4.0.1
-pyTelegramBotAPI==4.15.4
 firebase-admin==6.4.0
-Flask==3.0.2
 requests==2.25.1
 prettyTables==1.1.5
+ics==0.7.2
+aiohttp==3.9.3
+
