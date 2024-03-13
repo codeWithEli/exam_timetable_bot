@@ -19,6 +19,10 @@ def create_alarm_file(user_id: str, alarm_offset_minutes: int) -> str:
         
         cal = Calendar()
 
+        for course_name, course_info in all_exams_details.items():all_exams_details = FB.get_saved_exams_details(user_id)
+        
+        cal = Calendar()
+
         for course_name, course_info in all_exams_details.items():
             # Create event
             event = Event()
@@ -64,7 +68,7 @@ def create_alarm_file(user_id: str, alarm_offset_minutes: int) -> str:
 
     except Exception as e:
         logger.info(
-            f"An error occurred while processing {course_name}: {e}")
+            f"An error occurred while creating ALARM file for {course_name}: {e}")
         return None
 
 
