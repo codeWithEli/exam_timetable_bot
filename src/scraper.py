@@ -59,13 +59,15 @@ class Scraper:
 
         self.wait = WebDriverWait(self.driver, 10)
 
+        self.click_schedule_gen()
+
     def click_schedule_gen(self) -> None:
         try:
             schedule_gen_xpath = "/html/body/header/nav/div/div[2]/ul/li[4]/a"
             schedule_gen = self.wait.until(
                 EC.presence_of_element_located((By.XPATH, schedule_gen_xpath)))
             schedule_gen.click()
-            logger.info("Ready to generate schedule....")
+            logger.info("Ready to generate schedule....🌍")
 
         except Exception as e:
             logger.info(str(e))
@@ -121,12 +123,12 @@ class Scraper:
                 if batch.text != "No results found":
                     self.batch_list.append(batch.text)
 
-            logger.info(f'Found : {self.batch_list}')
+            logger.info(f'Found : {self.batch_list}✅')
 
             self.search_box.clear()
 
             if len(self.batch_list) > 0:
-                logger.info(f"Searching for {self.batch_list}")
+                logger.info(f"Searching for {self.batch_list} 🔎")
                 for course_found in self.batch_list:
                     self.search_course(course_found)
                     self.search_box.send_keys(Keys.RETURN)
@@ -172,15 +174,14 @@ class Scraper:
                     "arguments[0].setAttribute('style', '');", venue)
 
                 if id_range_text != "" and ID is not None:
-                    logger.info(id_range_text)
                     if id_range[0] <= int(ID) <= id_range[1]:
-                        logger.info(f'Found ID range - {id_range}')
+                        logger.info(f'Found ID - {ID} in range - {id_range} ✅')
                         exam_venue = venue.text.split("|")[0]
                         self.driver.execute_script(
                             "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue)
 
                         logger.info(
-                            f'Found exact exams venue {exam_venue}')
+                            f'Found exact exams venue {exam_venue} 📍')
                         return exam_venue
                     else:
                         logger.info(f"ID {ID} not in range")
@@ -190,7 +191,7 @@ class Scraper:
                     no_id_venues.append(no_id_venue)
                     FB.set_no_id_venues(user_id, course, no_id_venues)
                     logger.info(
-                        f"Found venue without ID attached -- {no_id_venues}")
+                        f"Found venue without ID attached -- {no_id_venues} 🗺")
 
                 else:
                     return None
@@ -223,14 +224,14 @@ class Scraper:
                     FB.save_exams_details(user_id, e_course,
                                           e_date, e_time, all_venues)
                     FB.set_course_code(user_id, e_course, course_code)
-                    logger.info(f"Saved exams details to firebase ✅")
+                    logger.info(f"Saved exams details to firebase 🔥")
 
                     if ID != None:
                         exact_venue = self.exact_exam_venue(user_id, e_course,
                                                             e_venues, ID)
                         FB.set_exact_venue(user_id, e_course, exact_venue)
                         logger.info(
-                            f"Exact venue and no id venues saved to firebase ✅")
+                            f"Exact venue and no id venues saved to firebase 🔥")
 
             return
 
@@ -262,7 +263,7 @@ class Scraper:
 
             image_url = FB.upload_screenshot_to_firebase(
                 screenshot_path, remote_name)
-            logger.info('Schedule saved to firebase')
+            logger.info('Schedule saved to firebase 🔥')
 
             return image_url
 
@@ -276,14 +277,13 @@ class Scraper:
     def single_exams_schedule(self, course_code, user_id: str):
         try:
 
-            self.click_schedule_gen()
             self.get_batch(course_code)
             if len(self.batch_list) > 0:
                 self.click_generate()
                 self.exams_detail(user_id, course_code, ID=None)
                 return self.take_screenshot(user_id, course_code)
             else:
-                logger.info(f"{course_code} Not found !!")
+                logger.info(f"{course_code} Not found !! 👾")
                 return None
 
         except (NoSuchElementException):
@@ -299,9 +299,9 @@ class Scraper:
             unavailable_courses = []
             available_courses = []
             cleaned_courses = all_courses.upper().replace(" ", "").split(',')
-            self.click_schedule_gen()
 
-            logger.info(f'User requested for {cleaned_courses}')
+
+            logger.info(f'User requested for {cleaned_courses} 🔎')
 
             for course in cleaned_courses:
                 if self.is_course_available(course):
@@ -310,7 +310,7 @@ class Scraper:
                     unavailable_courses.append(course)
 
             logger.info(
-                f'Available course on UG timetable website : {available_courses}')
+                f'Available course on UG timetable website : {available_courses} ✅')
             for found_course in available_courses:
                 self.get_batch(found_course)
 
@@ -318,7 +318,7 @@ class Scraper:
 
             self.exams_detail(user_id, found_course, ID)
             logger.info(
-                f'Not available on UG timetable website Yet: {unavailable_courses}')
+                f'Not available on UG timetable website Yet: {unavailable_courses} 👾')
 
             return self.take_screenshot(user_id, "Exams_Schedule"), unavailable_courses
 
