@@ -108,7 +108,7 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def get_batch(self, course_code: str) -> None:
+    def get_batch(self, course_code: str) -> list:
         try:
 
             self.search_course(course_code)
@@ -118,20 +118,22 @@ class Scraper:
                 EC.presence_of_element_located((By.XPATH, course_list_xpath)))
             course_batch = course_lists.find_elements(By.TAG_NAME, 'li')
 
-            self.batch_list = []
+            batch_list = []
             for batch in course_batch:
                 if batch.text != "No results found":
-                    self.batch_list.append(batch.text)
+                    batch_list.append(batch.text)
 
-            logger.info(f'Found : {self.batch_list}✅')
+            logger.info(f'Found batch list: {batch_list}✅')
 
             self.search_box.clear()
 
-            if len(self.batch_list) > 0:
-                logger.info(f"Searching for {self.batch_list} 🔎")
-                for course_found in self.batch_list:
+            if len(batch_list) > 0:
+                logger.info(f"Searching for {batch_list} 🔎")
+                for course_found in batch_list:
                     self.search_course(course_found)
                     self.search_box.send_keys(Keys.RETURN)
+
+            return batch_list
 
         except (NoSuchElementException):
             logger.error("get_batch element not found")
@@ -184,7 +186,7 @@ class Scraper:
                             f'Found exact exams venue {exam_venue} 📍')
                         return exam_venue
                     else:
-                        logger.info(f"ID {ID} not in range")
+                        logger.info(f"ID {ID} not in range {id_range}")
 
                 elif id_range_text == "" and ID is not None:
                     no_id_venue = venue.text.split("|")[0]
@@ -232,6 +234,8 @@ class Scraper:
                         FB.set_exact_venue(user_id, e_course, exact_venue)
                         logger.info(
                             f"Exact venue and no id venues saved to firebase 🔥")
+                    else:
+                        logger.info("ID not given, cant find venue")
 
             return
 
@@ -277,8 +281,8 @@ class Scraper:
     def single_exams_schedule(self, course_code, user_id: str):
         try:
 
-            self.get_batch(course_code)
-            if len(self.batch_list) > 0:
+            batch_list = self.get_batch(course_code)
+            if len(batch_list) > 0:
                 self.click_generate()
                 self.exams_detail(user_id, course_code, ID=None)
                 return self.take_screenshot(user_id, course_code)
@@ -299,7 +303,6 @@ class Scraper:
             unavailable_courses = []
             available_courses = []
             cleaned_courses = all_courses.upper().replace(" ", "").split(',')
-
 
             logger.info(f'User requested for {cleaned_courses} 🔎')
 
