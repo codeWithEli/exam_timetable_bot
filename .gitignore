@@ -3,3 +3,4 @@ src/__pycache__
 logs/
 token.json
 serviceAccount.json
+.venv
