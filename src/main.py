@@ -181,7 +181,7 @@ async def handle_course_with_ID(message: types.Message):
 
         ID = None
         user_search_text = await get_search_text(message)
-        student_id = re.findall(r'\d+$', user_search_text)
+        student_id = re.findall(r'\d{8}\d+', user_search_text)
 
         # Get student ID from user querry
         if student_id:
@@ -234,7 +234,7 @@ async def handle_course_with_ID(message: types.Message):
         # Send you can add ID message
         if ID is None:
             await bot.send_message(
-                user_id, "Want your exact venue? Simply add your ID at the end of the course code. For example: ugbs303, dcit303, ugrc210, 10223111 ")
+                user_id, "Want your exact venue📍? \nSimply add your ID at the end of the course code. For example: ugbs303, dcit303, ugrc210, 10223111 ")
 
     except Exception as e:
         logger.error(str(e))
@@ -262,6 +262,7 @@ async def get_chat_id(message: types.Message):
     return chat_id
 
 # Easter egg lol
+
 
 @router.message(lambda message: message.text.lower() == 'are you up?')
 async def handle_are_you_up(message: types.Message):
