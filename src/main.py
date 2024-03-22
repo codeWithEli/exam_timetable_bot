@@ -173,7 +173,7 @@ async def handle_course_with_ID(message: types.Message):
     Cleans data, searches schedules, and manages user interactions. Logs and reports errors.
     """
     try:
-        logger.info(f'User sent --- {message.text}')
+        
         user_id = str(await get_chat_id(message))
 
         # Delete previous data from firebase
@@ -181,12 +181,12 @@ async def handle_course_with_ID(message: types.Message):
 
         ID = None
         user_search_text = await get_search_text(message)
-        student_id = re.findall(r'\d{8}\d+', user_search_text)
+        student_id = re.search(r'\d{8,}$', user_search_text)
 
         # Get student ID from user querry
         if student_id:
             ID = int(student_id[0])
-            user_search_text = re.sub(r',\s?\d+', "", user_search_text)
+            user_search_text = re.sub(r',\s?\d{8,}', "", user_search_text)
             courses = user_search_text
             logger.info(
                 f"ID provided {ID} for all course seacrch {courses} ")
