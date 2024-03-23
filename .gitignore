@@ -4,3 +4,4 @@ logs/
 token.json
 serviceAccount.json
 .venv
+src/_scraper
