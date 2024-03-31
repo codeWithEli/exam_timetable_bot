@@ -154,7 +154,7 @@ def get_exact_venue(user_id: str, course):
 
 def set_no_id_venues(user_id: str, course: str, no_id_venue: list):
     """
-    Save venues withou iD attached
+    Save venues without ID attached
     """
     try:
         sanitized_course = re.sub(r'\W+', '_', course)
