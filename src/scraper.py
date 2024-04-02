@@ -6,6 +6,7 @@ import logging
 import dotenv
 
 from datetime import datetime
+from bs4 import BeautifulSoup
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -59,7 +60,7 @@ class Scraper:
 
         self.wait = WebDriverWait(self.driver, 10)
 
-        self.click_schedule_gen()
+        
 
     def click_schedule_gen(self) -> None:
         try:
@@ -72,10 +73,22 @@ class Scraper:
         except Exception as e:
             logger.info(str(e))
 
+    def course_search_in_schedule_gen(self, course_code: str) -> None:
+        try:
+            search_box_xpath = '//*[@id="3"]/div/div[2]/div/form/div[1]/div/div/span/span[1]/span/ul/li/input'
+
+            self.search_box = self.driver.find_element(
+                By.XPATH, search_box_xpath)
+            self.search_box.click()
+            self.search_box.send_keys(course_code)
+
+        except Exception as e:
+            logger.error(str(e))
+
     def is_course_available(self, course_code) -> bool:
         try:
 
-            self.search_course(course_code)
+            self.course_search_in_schedule_gen(course_code)
             course_list_xpath = '//*[@class="select2-results__options"]'
 
             course_lists = self.wait.until(
@@ -96,9 +109,9 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def search_course(self, course_code: str) -> None:
+    def course_search_in_search_schedule(self, course_code: str) -> None:
         try:
-            search_box_xpath = '//*[@id="3"]/div/div[2]/div/form/div[1]/div/div/span/span[1]/span/ul/li/input'
+            search_box_xpath = '//*[@id="2"]/div/div[2]/form/div[1]/div[1]/input'
 
             self.search_box = self.driver.find_element(
                 By.XPATH, search_box_xpath)
@@ -111,7 +124,7 @@ class Scraper:
     def get_batch(self, course_code: str) -> list:
         try:
 
-            self.search_course(course_code)
+            self.course_search_in_schedule_gen(course_code)
             course_list_xpath = '//*[@class="select2-results__options"]'
 
             course_lists = self.wait.until(
@@ -127,10 +140,10 @@ class Scraper:
 
             self.search_box.clear()
 
-            if len(batch_list) > 0:
-                logger.info(f"Searching for {batch_list} 🔎")
-                for course_found in batch_list:
-                    self.search_course(course_found)
+            if len(self.batch_list) > 0:
+                logger.info(f"Searching for {self.batch_list} 🔎")
+                for course_found in self.batch_list:
+                    self.course_search_in_schedule_gen(course_found)
                     self.search_box.send_keys(Keys.RETURN)
 
             return batch_list
@@ -159,44 +172,78 @@ class Scraper:
         except Exception as e:
             logger.error(str(e))
 
-    def exact_exam_venue(self, user_id, course, e_venues, ID: None | int):
+    def click_find_exams_schedules(self) -> None:
+        try:
+            generate_button_xpath = '//*[@id="2"]/div/div[2]/form/button[1]'
+            generate_button = self.wait.until(
+                EC.presence_of_element_located((By.XPATH, generate_button_xpath)))
+            self.driver.execute_script(
+                'arguments[0].click();', generate_button)
+
+        except (NoSuchElementException):
+            logger.error('click_generater element Not Found')
+
+        except Exception as e:
+            logger.error(str(e))
+
+    def click_search_schedules(self) -> None:
+        try:
+            button_xpath = '/html/body/header/nav/div/div[2]/ul/li[3]/a'
+            button = self.wait.until(
+                EC.presence_of_element_located((By.XPATH, button_xpath)))
+            self.driver.execute_script(
+                'arguments[0].click();', button)
+
+        except (NoSuchElementException):
+            logger.error('click_generater element Not Found')
+
+        except Exception as e:
+            logger.error(str(e))
+
+    def exact_exam_venue(self, user_id, course, e_venues, ID: int):
         try:
             no_id_venues = []
             exam_venue = ""
+            venue_list = []
 
             for venue in e_venues:
+                # Clear previous highlighs
+                # self.driver.execute_script(
+                #     "arguments[0].setAttribute('style', '');", venue)
+                venue_object = venue
+                name = venue.text
                 id_range_text = venue.find_element(
                     By.TAG_NAME, "span").text
-
                 id_range = list(
                     map(int, re.findall(r'\d+', id_range_text)))
-
-                # Clear previous highlighs
-                self.driver.execute_script(
-                    "arguments[0].setAttribute('style', '');", venue)
-
-                if id_range_text != "" and ID is not None:
-                    if id_range[0] <= int(ID) <= id_range[1]:
-                        logger.info(f'Found ID - {ID} in range - {id_range} ✅')
-                        exam_venue = venue.text.split("|")[0]
-                        self.driver.execute_script(
-                            "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue)
-
-                        logger.info(
-                            f'Found exact exams venue {exam_venue} 📍')
-                        return exam_venue
-                    else:
-                        logger.info(f"ID {ID} not in range {id_range}")
-
-                elif id_range_text == "" and ID is not None:
-                    no_id_venue = venue.text.split("|")[0]
-                    no_id_venues.append(no_id_venue)
-                    FB.set_no_id_venues(user_id, course, no_id_venues)
-                    logger.info(
-                        f"Found venue without ID attached -- {no_id_venues} 🗺")
-
+                if id_range:
+                    venue_list.append(
+                        (venue_object, name, id_range[0], id_range[1]))
                 else:
-                    return None
+                    no_id_venues.append(name)
+
+            FB.set_no_id_venues(user_id, course, no_id_venues)
+
+            low = 0
+            high = len(venue_list) - 1
+
+            while low <= high:
+                mid = (low + high)//2
+
+                if venue_list[mid][2] <= ID <= venue_list[mid][3]:
+                    logger.info(f'Found ID - {ID} in range - {id_range} ✅')
+                    exam_venue = venue_list[mid][1]
+                    self.driver.execute_script(
+                        "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue_list[mid][0])
+                    logger.info(
+                        f'Found exact exams venue {exam_venue} 📍')
+                    return exam_venue
+                elif venue_list[mid][3] > ID:
+                    high = mid - 1
+                else:
+                    low = mid + 1
+
+            return None
 
         except Exception as e:
             logger.error(f'Getting exact exams venue error - {str(e)}')
@@ -231,6 +278,7 @@ class Scraper:
                     if ID != None:
                         exact_venue = self.exact_exam_venue(user_id, e_course,
                                                             e_venues, ID)
+                    if exact_venue:
                         FB.set_exact_venue(user_id, e_course, exact_venue)
                         logger.info(
                             f"Exact venue and no id venues saved to firebase 🔥")
@@ -246,7 +294,7 @@ class Scraper:
             logger.error(str(e))
             return None
 
-    def take_screenshot(self, user_id: str, name: str) -> str:
+    def take_screenshot(self, user_id: str, name: str) -> str | None:
         try:
             # get date and time
             now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -278,28 +326,33 @@ class Scraper:
             logger.error(str(e))
             return None
 
-    def single_exams_schedule(self, course_code, user_id: str):
+    def single_exams_schedule(self, course_code: str) -> list | None:
         try:
+            self.click_search_schedules()
+            self.course_search_in_search_schedule(course_code)
+            self.click_find_exams_schedules()
 
-            batch_list = self.get_batch(course_code)
-            if len(batch_list) > 0:
-                self.click_generate()
-                self.exams_detail(user_id, course_code, ID=None)
-                return self.take_screenshot(user_id, course_code)
-            else:
-                logger.info(f"{course_code} Not found !! 👾")
-                return None
+            html = self.driver.page_source
+            soup = BeautifulSoup(html, "lxml")
+            exams_links = []
+
+            for a in soup.select('div.header a[href]'):
+                exams_links.append(a['href'])
+
+            logger.info(f"Got links for {course_code}")
+            return exams_links
 
         except (NoSuchElementException):
-            logger.error("Single exams schedule element not found")
+            logger.error("Single Exams Schedule element not found")
             return None
-
         except Exception as e:
             logger.error(f'SINGLE_EXAMS_SCHEDULE_ERROR: {str(e)}')
             return None
 
+
     def all_courses_schedule(self, all_courses, user_id, ID=None):
         try:
+            self.click_schedule_gen()
             unavailable_courses = []
             available_courses = []
             cleaned_courses = all_courses.upper().replace(" ", "").split(',')
@@ -343,8 +396,7 @@ if __name__ == '__main__':
     scraper = Scraper()
     user_id = "123456789"
     ID = 10963881
-    # scraper.single_exams_schedule("dcit303", user_id)
-    # scraper.find_exact_exams_venue("ugbs303", user_id, ID)
-    # scraper.find_exact_exams_venue("ugrc210", user_id, ID)
+    # scraper.single_exams_schedule("ugrc150")
     scraper.all_courses_schedule("ugbs303, dcit303, ugrc210", user_id, ID)
-    scraper.cleanup()
+
+    scraper.close()
