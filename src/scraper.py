@@ -60,8 +60,6 @@ class Scraper:
 
         self.wait = WebDriverWait(self.driver, 10)
 
-        
-
     def click_schedule_gen(self) -> None:
         try:
             schedule_gen_xpath = "/html/body/header/nav/div/div[2]/ul/li[4]/a"
@@ -203,7 +201,7 @@ class Scraper:
     def exact_exam_venue(self, user_id, course, e_venues, ID: int):
         try:
             no_id_venues = []
-            exam_venue = ""
+            exam_venue = None
             venue_list = []
 
             for venue in e_venues:
@@ -222,8 +220,6 @@ class Scraper:
                 else:
                     no_id_venues.append(name)
 
-            FB.set_no_id_venues(user_id, course, no_id_venues)
-
             low = 0
             high = len(venue_list) - 1
 
@@ -237,13 +233,13 @@ class Scraper:
                         "arguments[0].setAttribute('style', 'background: yellow; border: 2px solid red;');", venue_list[mid][0])
                     logger.info(
                         f'Found exact exams venue {exam_venue} 📍')
-                    return exam_venue
+                    return exam_venue, no_id_venues
                 elif venue_list[mid][3] > ID:
                     high = mid - 1
                 else:
                     low = mid + 1
 
-            return None
+            return exam_venue, no_id_venues
 
         except Exception as e:
             logger.error(f'Getting exact exams venue error - {str(e)}')
@@ -254,6 +250,10 @@ class Scraper:
 
             rows = self.wait.until(
                 EC.presence_of_all_elements_located((By.TAG_NAME, "tr")))
+
+            exams_info = {}
+            no_id_venues = None
+            exact_venue = None
 
             for row in rows[1:]:
                 cols = row.find_elements(By.TAG_NAME, "td")
@@ -270,21 +270,29 @@ class Scraper:
                         # Get all venues
                         all_venues.append(venue.text)
 
-                    FB.save_exams_details(user_id, e_course,
-                                          e_date, e_time, all_venues)
-                    FB.set_course_code(user_id, e_course, course_code)
-                    logger.info(f"Saved exams details to firebase 🔥")
-
                     if ID != None:
-                        exact_venue = self.exact_exam_venue(user_id, e_course,
-                                                            e_venues, ID)
-                    if exact_venue:
-                        FB.set_exact_venue(user_id, e_course, exact_venue)
-                        logger.info(
+                        exact_venue, no_id_venues = self.exact_exam_venue(
+                            user_id, e_course, e_venues, ID)
+
+                        
+
+                    exams_info[e_course] = {'Full_Course_Name': e_course,
+                                            'Exams_Date': e_date,
+                                            'Exams_Time': e_time,
+                                            'Exact_Venue': exact_venue,
+                                            'All_Exams_Venue': all_venues,
+                                            'No_ID_venues': no_id_venues,
+                                            'Course_Code': course_code
+                                            }
+                    logger.info(
                             f"Exact venue and no id venues saved to firebase 🔥")
                     else:
                         logger.info("ID not given, cant find venue")
 
+            for course_name, course_info in exams_info.items():
+                FB.save_exams_details(user_id, course_name, course_info)
+
+            logger.info(f"Saved exams details to firebase 🔥")
             return
 
         except (NoSuchElementException):
@@ -339,7 +347,7 @@ class Scraper:
             for a in soup.select('div.header a[href]'):
                 exams_links.append(a['href'])
 
-            logger.info(f"Got links for {course_code}")
+            logger.info(f"Got links for {exams_links}")
             return exams_links
 
         except (NoSuchElementException):
@@ -348,7 +356,6 @@ class Scraper:
         except Exception as e:
             logger.error(f'SINGLE_EXAMS_SCHEDULE_ERROR: {str(e)}')
             return None
-
 
     def all_courses_schedule(self, all_courses, user_id, ID=None):
         try:
@@ -396,7 +403,7 @@ if __name__ == '__main__':
     scraper = Scraper()
     user_id = "123456789"
     ID = 10963881
-    # scraper.single_exams_schedule("ugrc150")
-    scraper.all_courses_schedule("ugbs303, dcit303, ugrc210", user_id, ID)
+    scraper.single_exams_schedule("ugbs303")
+    # scraper.all_courses_schedule("ugbs303, dcit303, ugrc210", user_id, ID)
 
     scraper.close()
