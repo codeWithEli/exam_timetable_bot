@@ -2,6 +2,7 @@
 import logging
 import re
 import os
+from typing import Optional
 
 import firebase_admin
 from firebase_admin import credentials
@@ -43,7 +44,7 @@ def get_course_code(user_id: str, course) -> str:
 
         if doc.exists:
             course_code = doc.get(
-                f'{sanitized_course}.user_entered_course_code')
+                f'{sanitized_course}.course_code')
             return course_code
         else:
             logger.info(
@@ -61,7 +62,7 @@ def set_course_code(user_id: str, course, course_code: str) -> None:
     try:
         sanitized_course = re.sub(r'\W+', '_', course)
         db.collection('users').document(str(user_id)).update(
-            {f'{sanitized_course}.user_entered_course_code': course_code})
+            {f'{sanitized_course}.course_code': course_code})
 
     except Exception as e:
         logger.exception(
@@ -77,29 +78,28 @@ def get_saved_exams_details(user_id: str) -> dict:
             exams_details = doc.to_dict()
             return exams_details
         else:
-            logger.info('No such document!')
+            logger.info('No such document!🔥')
+            return None
     except Exception as e:
         logger.error(f'🔥Error getting exams details: {e}')
+        return None
 
 
-def save_exams_details(user_id: str, course: str, date: str, time: str, venue) -> None:
-
+def save_exams_details(user_id: str, course: str, course_info) -> None:
+    """Save all exams details to firebase"""
     try:
         sanitized_course = re.sub(r'\W+', '_', course)
         db.collection('users').document(user_id).update({
-            sanitized_course: {'Full_Course_Name': course,
-                               'Exams_Date': date,
-                               'Exams_Time': time,
-                               'All_Exams_Venue': venue
-                               }
+            sanitized_course: course_info
         })
     except Exception as e:
         logger.exception(
-            f"🔥Error setting exams details for {'users'}: {e}")
+            f"🔥Error setting exams details for {'users'}: {e}"
+        )
 
 
 def get_exams_venue(user_id: str) -> str:
-
+    """Retrive all exams venue for all courses"""
     try:
         doc_ref = db.collection('users').document(user_id)
         doc = doc_ref.get()
@@ -284,12 +284,12 @@ if __name__ == "__main__":
     user_id = "123456789"
     # set_course_code(user_id, "UGBS303")
     # save_exams_details(user_id, "UGBS303 - COMPUTER APPLICATIONS IN MANAGEMENT", "01 March 2024",
-    #                  "02:32 pm", "UGCS LAB 3 MAIN")
+    #                   "02:32 pm", "test")
     # set_exact_venue(
     #     user_id, "UGBS303_COMPUTER_APPLICATIONS_IN_MANAGEMENT", "UGCS LAB 3 MAIN")
     # get_exact_venue(user_id, "UGBS303 - COMPUTER APPLICATIONS IN MANAGEMENT")
     # get_saved_exams_details(user_id)
     # get_exams_venue(user_id)
     # get_course_code(user_id)
-    # delete_exams_details(
-    #    user_id)
+    delete_exams_details(
+        user_id)
