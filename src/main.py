@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Get environment variables
 dotenv.load_dotenv()
 TOKEN = os.environ.get("BOT_TOKEN")
-BASE_WEBHOOK_URL = os.environ.get("WEBHOOK_")
+BASE_WEBHOOK_URL = os.environ.get("WEBHOOK")
 WEB_SERVER_HOST = "0.0.0.0"
 WEB_SERVER_PORT = int(os.environ.get("PORT"))
 
