@@ -1,4 +1,6 @@
 UG_URL = "https://sts.ug.edu.gh/timetable"
-BOT_TOKEN = ""
 PORT = 8000
-WEBHOOK = ""
+
+BOT_TOKEN = "" # Get this from bot father on telegram (https://t.me/BotFather)
+WEBHOOK = "" # Use ngrok to set up webhook
+DEVELOPER_CHAT_ID = "" # Get your telegram chat id with bot eg: https://t.me/chatIDrobot
