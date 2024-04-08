@@ -32,9 +32,8 @@ TOKEN = os.environ.get("BOT_TOKEN")
 BASE_WEBHOOK_URL = os.environ.get("WEBHOOK")
 WEB_SERVER_HOST = "0.0.0.0"
 WEB_SERVER_PORT = int(os.environ.get("PORT"))
+DEVELOPER_CHAT_ID = os.environ.get("DEVELOPER_CHAT_ID")
 
-
-# All handlers should be attached to the Router (or Dispatcher)
 router = Router(name=__name__)
 
 # Create a bot instance
@@ -56,15 +55,13 @@ async def command_start_handler(message: Message) -> None:
         f"""
 Greetings {message.from_user.username}👋, Welcome to your Exams Bot! 🤖
 
-You can search for a single or multiple courses with or without ID
+You can search for a any exams schedule
 
-1. Single course search example: \n\nUGRC102 \nOR \nUGRC102, 10234567
+1. Search examples: ugrc102, 10234567
 
-2. Multiple courses search example: \n\nUGBS303, DCIT102, MATH306 \nOR \nUGBS303, DCIT102, MATH306, 10234567
+2. I will return your exams venue (exact venue) 📍, exam date 📅 and time ⏰  instantly from https://sts.ug.edu.gh/timetable/.
 
-3. I will return your exams venue (exact venue) 📍, exam date 📅 and time ⏰  instantly from https://sts.ug.edu.gh/timetable/.
-
-Simply input your course code(s) and/or ID, and leave the rest to me!
+Simply input your course code and ID, and leave the rest to me!
 
 Happy studying and good luck with your exams! 📚🍀
 
@@ -78,10 +75,9 @@ async def command_help_handler(message: Message) -> None:
 Hello {message.from_user.username}, 
 Here is how to use your Exams Bot! 🤖
 
-You can search for course with or without ID
+You can search for course any exams schedule
 
-1. Search examples: ugrc102, 10234567 OR ugrc, all
-
+1. Search examples: ugrc102, 10234567
 
 2. I will return your exams venue (exact venue) 📍, exam date 📅 and time ⏰  instantly from https://sts.ug.edu.gh/timetable/.
 
@@ -99,7 +95,7 @@ Hello! 👋 This is @eli_bigman
 I created this Exams Timetable Bot after I nearly missed an exam. 🏃‍♂️💨
 This is a simple way to get your exam schedules instantly. Just type in your course code, and let the bot handle the rest!
 
-If you encounter any errors or issues, feel free to reach out (@eli_bigman). I'm here to help! 🙌
+If you encounter any errors or issues, feel free to reach out 🙌
 
 You can also check out and star the source code for this bot on GitHub: https://github.com/exam_timetable_bot 💻✨
 
@@ -144,6 +140,7 @@ async def handle_exam_schedules_search(message: types.Message):
         else:
             await bot.delete_messages(
                 user_id, [sticker_message_id, searching_course_msg_id])
+
             await message.reply(
                 text=f"""<strong>❌ {course_code} not found on UG timetable site</strong>
 Please double-check the course code.\n
@@ -201,11 +198,14 @@ It's possible that <strong>{course_code}</strong> has not yet been uploaded to t
 
     except Exception as e:
         logger.info(str(e))
-        msg = "⚠️ An error occurred ⚠️ \nIf this issue persists, please contact my developer @eli_bigman for assistance.  "
+        error_msg = str(e)
+        msg = "⚠️ An error occurred ⚠️ \nIf this issue persists, please contact my developer @eli_bigman for assistance."
         await bot.delete_messages(
             user_id, [sticker_message_id, searching_course_msg_id])
-        await bot.send_message(
+        await message.reply(
             user_id, msg)
+        if DEVELOPER_CHAT_ID:
+            await bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=f"An error occured: \n{error_msg}")
         raise
 
 
