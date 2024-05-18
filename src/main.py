@@ -106,7 +106,7 @@ Enjoy using the bot! 💯
 
 
 @router.message(F.text.regexp(r'^([a-zA-Z]{4}\s?\d{3}\s?,\s?)(\s?[0-9]{8,})$'))
-@profile
+
 async def handle_exam_schedules_search(message: types.Message):
     """
     This handler single course search with student ID 
