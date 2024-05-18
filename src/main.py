@@ -5,7 +5,6 @@ import asyncio
 import re
 
 from aiohttp import web
-from memory_profiler import profile
 
 import scraper
 # import firebase_functions as FB
