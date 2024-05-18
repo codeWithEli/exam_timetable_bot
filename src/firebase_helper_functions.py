@@ -2,10 +2,8 @@ import logging
 import re
 import os
 from typing import Optional
+from firebase_init import db, storage
 
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore, storage
 
 class FirebaseHelperFunctions(): 
     def __init__(self, user_id: str ):
@@ -20,15 +18,15 @@ class FirebaseHelperFunctions():
         self.logger = logging.getLogger(__name__)
 
         try:
-            cred = credentials.Certificate("./serviceAccount.json")
+            # cred = credentials.Certificate("./serviceAccount.json")
 
-            # Initialize Firebase app
-            firebase_admin.initialize_app(
-                cred, {"storageBucket": "ug-exams-bot.appspot.com"})
+            # # Initialize Firebase app
+            # firebase_admin.initialize_app(
+            #     cred, {"storageBucket": "ug-exams-bot.appspot.com"})
 
-            self.db = firestore.client()
-            self.doc_ref = self.db.collection(user_id)
-            # self.bucket = storage.bucket()
+            self.db = db
+            self.doc_ref = self.db.collection(self.user_id)
+            self.bucket = storage.bucket()
 
         except FileNotFoundError as e:
             self.logger.error(f"🔥Error loading service account credentials: {e}")
@@ -40,7 +38,7 @@ class FirebaseHelperFunctions():
 
 
 
-    def save_exact_venue_details(self, course: str, course_info: dict) -> None:
+    def save_exact_venue_details(self,  course: str, course_info: dict) -> None:
         """Save all exams details to firebase"""
         try:
             sanitized_course = re.sub(r'\W+', '_', course)
@@ -59,7 +57,7 @@ class FirebaseHelperFunctions():
                 f"🔥Error saving exams details: {e}"
             )
 
-    def save_exact_venue_not_found_details(self, course: str, course_info: dict) -> None:
+    def save_exact_venue_not_found_details(self,  course: str, course_info: dict) -> None:
         """Save exact venue not found details to firebase"""
         try:
             sanitized_course = re.sub(r'\W+', '_', course)
@@ -91,8 +89,9 @@ class FirebaseHelperFunctions():
 
             if doc.get().exists:
                 exams_info = doc.get([f'{course}']).to_dict()
+                info = exams_info.get(course, {})
                 # self.logger.info(f'exams_info: {exams_info}')
-                return exams_info
+                return info
             
             else:
                 return None
@@ -111,8 +110,9 @@ class FirebaseHelperFunctions():
 
             if doc.get().exists:
                 exams_info = doc.get([f'{course}']).to_dict()
+                info = exams_info.get(course, {})
                 # self.logger.info(f'exams_info: {exams_info}')
-                return exams_info
+                return info
             else:
                 return None
         except KeyError as e:
@@ -181,7 +181,7 @@ class FirebaseHelperFunctions():
         try:
             # Upload to firebase storage
             bucket = storage.bucket()
-            blob = bucket.blob(f"calendars/{remote_file_name}")
+            blob = bucket.blob(f"calendars/{user_id}/{remote_file_name}")
             blob.upload_from_filename(local_file_path)
 
             # return public url
@@ -205,7 +205,7 @@ class FirebaseHelperFunctions():
 
         try:
             bucket = storage.bucket()
-            blob = bucket.blob(f"screenshots/{remote_file_name}")
+            blob = bucket.blob(f"screenshots/{user_id}/{remote_file_name}")
             blob.delete()
 
         except Exception as e:
@@ -217,15 +217,13 @@ if __name__ == "__main__":
     user_id = "123456789"
     firebase_helper = FirebaseHelperFunctions(user_id)
     
-    # Example usage of methods
-
-    # firebase_helper.save_exact_venue_details("Math", {"venue": "Room 1013", "time": "9:00 AM"}) 
-    # firebase_helper.save_exact_venue_not_found_details("Physics", {"venue": "Not found", "time": "2:00 PM"}) 
-    # firebase_helper.get_exact_venue_info("Math")
-    # firebase_helper.get_not_exact_venue_info("Physics") 
-    # firebase_helper.get_exact_venue_keys()
-    # firebase_helper.get_not_exact_venue_keys() 
+    firebase_helper.save_exact_venue_details("Math", {"venue": "Room 1013", "time": "9:00 AM"}) 
+    firebase_helper.save_exact_venue_not_found_details("Physics", {"venue": "Not found", "time": "2:00 PM"}) 
+    firebase_helper.get_exact_venue_info("Math")
+    firebase_helper.get_not_exact_venue_info("Physics") 
+    firebase_helper.get_exact_venue_keys()
+    firebase_helper.get_not_exact_venue_keys() 
     firebase_helper.delete_exams_details() 
-    # firebase_helper.upload_to_firebase("local_file_path", "remote_file_name") 
-    # firebase_helper.delete_from_firebase_storage("remote_file_name")
+    # firebase_helper.upload_to_firebase(user_id,"local_file_path", "remote_file_name") 
+    # firebase_helper.delete_from_firebase_storage(user_id,"remote_file_name")
 
