@@ -101,9 +101,11 @@ class Scraper:
             html = self.driver.page_source
             soup = BeautifulSoup(html, "lxml")
             exams_links = []
-
+            
             for a in soup.select('div.header a[href]'):
                 exams_links.append(a['href'])
+
+            # logger.info(f"Exams links--{exams_links}")
             return exams_links
 
         except (NoSuchElementException):
