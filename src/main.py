@@ -4,13 +4,13 @@ import dotenv
 import asyncio
 import re
 
-
 from aiohttp import web
+from memory_profiler import profile
 
 import scraper
-import firebase_functions as FB
-import alarm as cal_gen
-from find_single_exam import get_single_exam_details
+# import firebase_functions as FB
+from firebase_helper_functions import FirebaseHelperFunctions
+from find_single_exam import main as FEVmain
 
 from aiogram import Bot, Dispatcher, Router, types, F, exceptions
 from aiogram.filters import CommandStart, Command
@@ -31,7 +31,7 @@ dotenv.load_dotenv()
 TOKEN = os.environ.get("BOT_TOKEN")
 BASE_WEBHOOK_URL = os.environ.get("WEBHOOK")
 WEB_SERVER_HOST = "0.0.0.0"
-WEB_SERVER_PORT = int(os.environ.get("PORT"))
+WEB_SERVER_PORT = int(os.environ.get("PORT", 8000))
 DEVELOPER_CHAT_ID = os.environ.get("DEVELOPER_CHAT_ID")
 
 router = Router(name=__name__)
@@ -57,7 +57,7 @@ Greetings {message.from_user.username}👋, Welcome to your Exams Bot! 🤖
 
 You can search for a any exams schedule
 
-1. Search examples: ugrc102, 10234567
+1. Search example: ugrc102, 10234567
 
 2. I will return your exams venue (exact venue) 📍, exam date 📅 and time ⏰  instantly from https://sts.ug.edu.gh/timetable/.
 
@@ -97,7 +97,7 @@ This is a simple way to get your exam schedules instantly. Just type in your cou
 
 If you encounter any errors or issues, feel free to reach out 🙌
 
-You can also check out and star the source code for this bot on GitHub: https://github.com/exam_timetable_bot 💻✨
+You can also check out and star the source code for this bot on GitHub: https://github.com/eli-bigman/exam_timetable_bot 💻✨
 
 If you find this bot useful and wish to show your support, contributions towards hosting costs or a coffee for the developer are greatly appreciated ☕️.
 You can send your support via MOMO at 0551757558. Thank you!
@@ -107,12 +107,16 @@ Enjoy using the bot! 💯
 
 
 @router.message(F.text.regexp(r'^([a-zA-Z]{4}\s?\d{3}\s?,\s?)(\s?[0-9]{8,})$'))
+@profile
 async def handle_exam_schedules_search(message: types.Message):
     """
     This handler single course search with student ID 
     """
     try:
         user_id = str(await get_chat_id(message))
+
+        #initialize firebase helper functions
+        firebase = FirebaseHelperFunctions(user_id)
 
         ID = None
         user_search_text = await get_search_text(message)
@@ -135,64 +139,72 @@ async def handle_exam_schedules_search(message: types.Message):
         links = scraper.single_exams_schedule(course_code)
 
         if links:
-            found_exact_venue = await get_single_exam_details(user_id, ID, links)
-            exams_details = FB.get_saved_exams_details(user_id)
+            found_exact_venue = await FEVmain(user_id, ID, links)
+            # exams_details = FB.get_saved_exams_details(user_id)
         else:
             await bot.delete_messages(
                 user_id, [sticker_message_id, searching_course_msg_id])
-
-            await message.reply(
-                text=f"""<strong>❌ {course_code} not found on UG timetable site</strong>
+            err_response=f"""<strong>❌ {course_code} not found on UG timetable site</strong>
 Please double-check the course code.\n
 It's possible that <strong>{course_code}</strong> has not yet been uploaded to the site yet. You can try searching for it at a later time.
 
 <i><a href="https://sts.ug.edu.gh/timetable/">Visit UG timetable site 🌍</a></i>
-""", parse_mode=ParseMode.HTML)
+"""
+            await message.reply(
+                text=err_response, parse_mode=ParseMode.HTML)
 
             return
 
-        formatted_data = []
-        if found_exact_venue and exams_details:
-            for _, info in exams_details.items():
-                formatted_data.append(f"""
-<a href="{info.get("Link")}">{"📝"}{info.get("Full_Course_Name")}</a>
+        if found_exact_venue:
+            exact_venues_key_list = firebase.get_exact_venue_keys()
+            await message.reply(f"Found {len(exact_venues_key_list)} venue(s)📍 for ID {ID} \n\nPLEASE CONFIRM YOUR CAMPUS IN THE LINK 🌍")
+
+            for course in exact_venues_key_list:
+                info = firebase.get_exact_venue_info(course)
+                # info = exams_details.get(course, [])
+                response = f"""
+<strong>Link <a href="{info.get("Link")}">{"👉"}{info.get("Full_Course_Name")}{"🌍"}</a></strong>
 <blockquote>
 <strong>Course_Level</strong> : {info.get("Course_Level")}\n
 <strong>Course Name</strong> : {info.get("Full_Course_Name")}\n
 <strong>Exams Date</strong> : {info.get("Exams_Date")}\n
 <strong>Exams Time</strong> : {info.get("Exams_Time")}\n
-<strong>📌 Exact Venue for {ID} </strong> : <b>{info.get("Exact_Venue")}</b>\n
+<strong>📌 Exact Venue for {ID} </strong> : <code>{info.get("Exact_Venue")}</code>\n
 <strong>Exams Status</strong> : <i>{info.get("Exams_Status")}</i>\n
 <strong>Venues without IDs</strong> : {info.get("No_ID_Venue")}\n
 </blockquote>
-""")
-            await bot.delete_messages(
-                user_id, [sticker_message_id, searching_course_msg_id])
-            await message.reply(f"Found {len(exams_details)} venue(s)📍 for ID {ID} ")
-            for text in formatted_data:
-                await message.answer(text, parse_mode=ParseMode.HTML)
+<strong>❗ PLEASE CONFIRM YOUR CAMPUS IN THE LINK ABOVE CLICK ON IT TO VERIFY 💯 </strong>
 
-        elif not found_exact_venue and exams_details:
-            for _, info in exams_details.items():
-                all_exams_venues = info.get("All_Exams_Venues")
-                all_exams_venues_str = '\n📍 '.join(all_exams_venues)
+"""
 
-                formatted_data.append(f"""
-<a href="{info.get("Link")}">{"📝"}{info.get("Full_Course_Name")}</a>
+                await bot.delete_messages(
+                    user_id, [sticker_message_id, searching_course_msg_id])
+                await message.answer(text=response, parse_mode=ParseMode.HTML)
+
+        elif not found_exact_venue:
+            not_exact_venues_key_list = firebase.get_not_exact_venue_keys()
+            await message.reply(f"❗No exact venue found for ID - {ID}! ❗\n\nHowever, I've discovered {len(not_exact_venues_key_list)} exam schedule(s) for {course_code}.")
+
+            for course in not_exact_venues_key_list:
+                info = firebase.get_not_exact_venue_info(course)
+                # info = exams_details[course]
+                all_exams_venues = '\n📍'.join(info.get("All_Exams_Venues", []))
+
+                response = f"""
+<strong>Link <a href="{info.get("Link")}">{"👉"}{info.get("Full_Course_Name")}{"🌍"}</a></strong>
 <blockquote>
 <strong>Course_Level</strong> : {info.get("Course_Level")}\n
 <strong>Course Name</strong> : {info.get("Full_Course_Name")}\n
 <strong>Exams Date</strong> : {info.get("Exams_Date")}\n
 <strong>Exams Time</strong> : {info.get("Exams_Time")}\n
 <strong>Exams Status</strong> : <i>{info.get("Exams_Status")}</i>\n
-<strong>All Exams Venue</strong> :\n{"📍 "}{all_exams_venues_str}\n
+<strong>All Exams Venue</strong> :\n{"📍"}{all_exams_venues}\n
 </blockquote>
-""")
-            await bot.delete_messages(
-                user_id, [sticker_message_id, searching_course_msg_id])
-            await message.reply(f"❗No exact venue found for ID - {ID}! ❗\n\nHowever, I've discovered {len(exams_details)} exam schedule(s) for {course_code}.")
-            for text in formatted_data:
-                await message.answer(text, parse_mode=ParseMode.HTML)
+
+"""
+                await bot.delete_messages(
+                    user_id, [sticker_message_id, searching_course_msg_id])
+                await message.answer(text=response, parse_mode=ParseMode.HTML)
 
         return
 
