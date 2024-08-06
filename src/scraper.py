@@ -36,7 +36,7 @@ class Scraper:
         # persistent browser
         options.add_experimental_option("detach", True)
 
-        options.add_argument('--headless')
+        #options.add_argument('--headless')
         options.add_argument('--disable-gpu')
         options.add_argument('--disable-extensions')
         options.add_argument('--disable-pdf-viewer')
@@ -122,5 +122,5 @@ class Scraper:
 if __name__ == '__main__':
     scraper = Scraper()
     user_id = "123456789"
-    scraper.single_exams_schedule("ugbs303")
+    scraper.single_exams_schedule("dcit312")
     scraper.close()

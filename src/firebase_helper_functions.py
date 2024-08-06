@@ -215,15 +215,16 @@ class FirebaseHelperFunctions():
 
 if __name__ == "__main__":
     user_id = "123456789"
-    firebase_helper = FirebaseHelperFunctions(user_id)
-    
-    firebase_helper.save_exact_venue_details("Math", {"venue": "Room 1013", "time": "9:00 AM"}) 
-    firebase_helper.save_exact_venue_not_found_details("Physics", {"venue": "Not found", "time": "2:00 PM"}) 
-    firebase_helper.get_exact_venue_info("Math")
-    firebase_helper.get_not_exact_venue_info("Physics") 
-    firebase_helper.get_exact_venue_keys()
-    firebase_helper.get_not_exact_venue_keys() 
-    firebase_helper.delete_exams_details() 
-    # firebase_helper.upload_to_firebase(user_id,"local_file_path", "remote_file_name") 
-    # firebase_helper.delete_from_firebase_storage(user_id,"remote_file_name")
-
+    if user_id:
+        firebase_helper = FirebaseHelperFunctions(user_id)
+        
+        firebase_helper.save_exact_venue_details("Math", {"venue": "Room 1013", "time": "9:00 AM"}) 
+        firebase_helper.save_exact_venue_not_found_details("Physics", {"venue": "Not found", "time": "2:00 PM"}) 
+        firebase_helper.get_exact_venue_info("Math")
+        firebase_helper.get_not_exact_venue_info("Physics") 
+        firebase_helper.get_exact_venue_keys()
+        firebase_helper.get_not_exact_venue_keys() 
+        firebase_helper.delete_exams_details() 
+        # firebase_helper.upload_to_firebase(user_id,"local_file_path", "remote_file_name") 
+        # firebase_helper.delete_from_firebase_storage(user_id,"remote_file_name")
+        print("Done")

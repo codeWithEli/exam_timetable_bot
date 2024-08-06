@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Get environment variables
 dotenv.load_dotenv()
 TOKEN = os.environ.get("BOT_TOKEN")
-BASE_WEBHOOK_URL = os.environ.get("WEBHOOK")
+BASE_WEBHOOK_URL = os.environ.get("WEBHOK")
 WEB_SERVER_HOST = "0.0.0.0"
 WEB_SERVER_PORT = int(os.environ.get("PORT", 8000))
 DEVELOPER_CHAT_ID = os.environ.get("DEVELOPER_CHAT_ID")
@@ -145,8 +145,8 @@ async def handle_exam_schedules_search(message: types.Message):
                 user_id, [sticker_message_id, searching_course_msg_id])
             err_response=f"""<strong>❌ {course_code} not found on UG timetable site</strong>
 Please double-check the course code.\n
-It's possible that <strong>{course_code}</strong> has not yet been uploaded to the site yet. You can try searching for it at a later time.
 
+👇🏾👇🏾👇🏾👇🏾
 <i><a href="https://sts.ug.edu.gh/timetable/">Visit UG timetable site 🌍</a></i>
 """
             await message.reply(
