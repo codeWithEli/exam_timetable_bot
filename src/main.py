@@ -143,8 +143,8 @@ async def handle_exam_schedules_search(message: types.Message):
         else:
             await bot.delete_messages(
                 user_id, [sticker_message_id, searching_course_msg_id])
-            err_response=f"""<strong>❌ {course_code} not found on UG timetable site</strong>
-Please double-check the course code.\n
+            err_response=f"""<strong>❌ {course_code} not found 👉🏾👈🏾 </strong>
+Please double-check the course code or visit UG timetable site.\n
 
 👇🏾👇🏾👇🏾👇🏾
 <i><a href="https://sts.ug.edu.gh/timetable/">Visit UG timetable site 🌍</a></i>
