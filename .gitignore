@@ -2,7 +2,6 @@
 src/__pycache__
 logs/
 token.json
-serviceAccount.json
 .venv
 src/_scraper.py
 .vs
