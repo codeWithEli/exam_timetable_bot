@@ -37,6 +37,8 @@ class Scraper:
                         if pattern.search(link.text):
                             self.found_links.append(link['href'])
                 
+                logger.info(f'Found {len(self.found_links)} exams links for {course_code} in page 1')
+                
                 return self.found_links
                 
             except Exception as e:
@@ -65,6 +67,8 @@ class Scraper:
                 soup = BeautifulSoup(html, "lxml")
                 remaining_exams_card = soup.select("body > div.container.resize > div:nth-child(2) > div")
                 self.find_course_links(remaining_exams_card, course_code)
+
+            logger.info(f'Found {len(self.found_links)} exams links for {course_code} in total')
             return self.found_links
         
         except Exception as e:
