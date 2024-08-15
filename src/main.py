@@ -156,7 +156,8 @@ Please double-check the course code or visit UG timetable site.\n
 
         if found_exact_venue:
             exact_venues_key_list = firebase.get_exact_venue_keys()
-            await message.reply(f"Found {len(exact_venues_key_list)} venue(s)📍 for ID {ID} \n\nPLEASE CONFIRM YOUR CAMPUS IN THE LINK 🌍")
+            if len(exact_venues_key_list) != 1:
+                await message.reply(f"Found {len(exact_venues_key_list)} venues📍 for ID {ID} \n\nPLEASE CONFIRM YOUR CAMPUS IN THE LINK 🌍")
 
             for course in exact_venues_key_list:
                 info = firebase.get_exact_venue_info(course)
@@ -166,6 +167,7 @@ Please double-check the course code or visit UG timetable site.\n
 <blockquote>
 <strong>Course_Level</strong> : {info.get("Course_Level")}\n
 <strong>Course Name</strong> : {info.get("Full_Course_Name")}\n
+<strong>Campus</strong> : {info.get("Campus")}\n
 <strong>Exams Date</strong> : {info.get("Exams_Date")}\n
 <strong>Exams Time</strong> : {info.get("Exams_Time")}\n
 <strong>📌 Exact Venue for {ID} </strong> : <code>{info.get("Exact_Venue")}</code>\n
@@ -194,6 +196,7 @@ Please double-check the course code or visit UG timetable site.\n
 <blockquote>
 <strong>Course_Level</strong> : {info.get("Course_Level")}\n
 <strong>Course Name</strong> : {info.get("Full_Course_Name")}\n
+<strong>Campus</strong> : {info.get("Campus")}\n
 <strong>Exams Date</strong> : {info.get("Exams_Date")}\n
 <strong>Exams Time</strong> : {info.get("Exams_Time")}\n
 <strong>Exams Status</strong> : <i>{info.get("Exams_Status")}</i>\n
