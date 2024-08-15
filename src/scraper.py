@@ -6,13 +6,6 @@ from bs4 import BeautifulSoup
 import requests
 import re
 
-# from selenium import webdriver
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.chrome.service import Service
-# from selenium.webdriver.support.ui import WebDriverWait
-# from selenium.webdriver.support import expected_conditions as EC
-# from webdriver_manager.chrome import ChromeDriverManager
-# from selenium.common.exceptions import NoSuchElementException
 
 # constants
 dotenv.load_dotenv()
@@ -48,7 +41,7 @@ class Scraper:
                 
             except Exception as e:
                 logger.error(f'FIND_COURSE_LINKS_ERROR: {str(e)}')
-                return None
+                raise
 
 
     def single_exams_schedule(self, course_code: str) -> list | None:
@@ -76,7 +69,7 @@ class Scraper:
         
         except Exception as e:
             logger.error(f'SINGLE_EXAMS_SCHEDULE_ERROR: {str(e)}')
-            return None
+            raise
 
 
 

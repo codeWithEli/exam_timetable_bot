@@ -5,6 +5,8 @@ from typing import Optional
 from firebase_init import db, storage
 
 
+
+
 class FirebaseHelperFunctions(): 
     def __init__(self, user_id: str ):
 
@@ -41,7 +43,7 @@ class FirebaseHelperFunctions():
     def save_exact_venue_details(self,  course: str, course_info: dict) -> None:
         """Save all exams details to firebase"""
         try:
-            sanitized_course = re.sub(r'\W+', '_', course)
+            sanitized_course = re.sub(r'\W+', '_', course.strip())
             doc = self.doc_ref.document('ExactVenuesDetails')
             
             if doc.get().exists:
@@ -60,7 +62,7 @@ class FirebaseHelperFunctions():
     def save_exact_venue_not_found_details(self,  course: str, course_info: dict) -> None:
         """Save exact venue not found details to firebase"""
         try:
-            sanitized_course = re.sub(r'\W+', '_', course)
+            sanitized_course = re.sub(r'\W+', '_', course.strip())
             doc = self.doc_ref.document('NotExactVenuesDetails')
             
             if doc.get().exists:
@@ -77,6 +79,7 @@ class FirebaseHelperFunctions():
             self.logger.exception(
                 f"🔥Error saving exact venue not found details {e}"
             )
+            raise
 
    
 
@@ -166,10 +169,11 @@ class FirebaseHelperFunctions():
         try:
             self.doc_ref.document('ExactVenuesDetails').delete()
             self.doc_ref.document('NotExactVenuesDetails').delete()
+            return None
 
         except Exception as e:
             self.logger.error(f"🔥An error occurred while deleting exams details: {e}")
-            return None
+            raise
 
     def upload_to_firebase(self, local_file_path: str, remote_file_name: str) -> str:
         """
@@ -195,7 +199,8 @@ class FirebaseHelperFunctions():
 
         except Exception as e:
            self.logger.exception(f'🔥Upload calendar failed : {str(e)}')
-
+           raise
+        
 
 
     def delete_from_firebase_storage(self, remote_file_name: str):
@@ -210,6 +215,7 @@ class FirebaseHelperFunctions():
 
         except Exception as e:
            self.logger.error(f"🔥Error deleting screenshot - {str(e)}")
+           raise
 
 
 
