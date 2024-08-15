@@ -78,13 +78,13 @@ async def get_single_exam_details(user_id: str, id: int, link: str) -> bool:
                                                                     'Exact_Venue': f"{venue_name} | {id_range}", 'No_ID_Venue': no_id_venue, 'Link': link, }
                             found_exact_venue = True
                             firebase.save_exact_venue_details(course_name, exact_venues_details)
-                            logger.info(f'Venue Found ✅: {venue_name} | {id_range}')
+                            # logger.info(f'Venue Found ✅: {venue_name} | {id_range}')
                         else:
                             venue_not_found_details = {'Full_Course_Name': course_name, 'Course_Level': course_level, 'Campus': campus,
                                                             'Exams_Status': exams_status, 'Exams_Date': exam_date, 'Exams_Time': exam_time,
                                                             'Exact_Venue': None, 'All_Exams_Venues': all_venues,  'Link': link, }
                             firebase.save_exact_venue_not_found_details(course_name,venue_not_found_details)
-                            logger.info(f'Venue Not Found ❌: {venue_name}')
+                            # logger.info(f'Venue Not Found ❌: {venue_name}')
                 else:
                     return found_exact_venue
                 return found_exact_venue
