@@ -199,7 +199,7 @@ It's possible that <strong>{course_code}</strong> has not yet been uploaded to t
     except Exception as e:
         logger.info(str(e))
         error_msg = str(e)
-        msg = "⚠️ An error occurred ⚠️ \nIf this issue persists, please contact my developer @eli_bigman for assistance."
+        msg = "⚠️ An error occurred ⚠️."
         await bot.delete_messages(
             user_id, [sticker_message_id, searching_course_msg_id])
         await message.reply(
@@ -280,7 +280,7 @@ Oops!😕
 Pleae ensure course code has 4 letters and 3 numbers 📚
 ID should be at least 8 numbers 🔢
 Separate with a comma, like: ugrc210, 10921287.
-\nLet's try that again 🔄.\n\nIf this issue persists, please contact my developer @eli_bigman
+\nLet's try that again 🔄.
 """)
 
 
