@@ -5,4 +5,5 @@ token.json
 serviceAccount.json
 .venv
 src/_scraper.py
+venv
 
