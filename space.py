@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv, find_dotenv
 
 # Explicitly specify the path to the .env file
-dotenv_path = find_dotenv('.env')
+dotenv_path = find_dotenv(".env")
 load_dotenv(dotenv_path)
 print(dotenv_path)
 

@@ -1,6 +1,4 @@
 import logging
-import os
-import dotenv
 import asyncio
 import re
 
@@ -11,6 +9,8 @@ import scraper
 import firebase_functions as FB
 import alarm as cal_gen
 from find_single_exam import get_single_exam_details
+from config import AppConfig
+from utils import logger
 
 from aiogram import Bot, Dispatcher, Router, types, F, exceptions
 from aiogram.filters import CommandStart, Command
@@ -19,25 +19,11 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums.parse_mode import ParseMode
 
-# Configure logger
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-
-logger = logging.getLogger(__name__)
-
-# Get environment variables
-dotenv.load_dotenv()
-TOKEN = os.environ.get("BOT_TOKEN")
-BASE_WEBHOOK_URL = os.environ.get("WEBHOOK")
-WEB_SERVER_HOST = "0.0.0.0"
-WEB_SERVER_PORT = int(os.environ.get("PORT"))
-DEVELOPER_CHAT_ID = os.environ.get("DEVELOPER_CHAT_ID")
 
 router = Router(name=__name__)
 
 # Create a bot instance
-bot = Bot(TOKEN)
+bot = Bot(AppConfig.TOKEN.value)
 
 # Create scraper an instance of the scraper class
 scraper = scraper.Scraper()
@@ -69,7 +55,7 @@ Happy studying and good luck with your exams! 📚🍀
     )
 
 
-@router.message(Command('help'))
+@router.message(Command("help"))
 async def command_help_handler(message: Message) -> None:
     await message.answer(f"""
 Hello {message.from_user.username}, 
@@ -87,7 +73,7 @@ Happy studying and good luck with your exams! 📚🍀
         """)
 
 
-@router.message(Command('about'))
+@router.message(Command("about"))
 async def command_about_handler(message: Message) -> None:
     await message.answer(
         f"""
@@ -103,28 +89,30 @@ If you find this bot useful and wish to show your support, contributions towards
 You can send your support via MOMO at 0551757558. Thank you!
 
 Enjoy using the bot! 💯
-""")
+"""
+    )
 
 
-@router.message(F.text.regexp(r'^([a-zA-Z]{4}\s?\d{3}\s?,\s?)(\s?[0-9]{8,})$'))
+@router.message(F.text.regexp(r"^([a-zA-Z]{4}\s?\d{3}\s?,\s?)(\s?[0-9]{8,})$"))
 async def handle_exam_schedules_search(message: types.Message):
     """
-    This handler single course search with student ID 
+    This handler single course search with student ID
     """
     try:
         user_id = str(await get_chat_id(message))
 
         ID = None
         user_search_text = await get_search_text(message)
-        student_id = re.findall(r'\d+$', user_search_text)
+        student_id = re.findall(r"\d+$", user_search_text)
 
         # Get student ID from user querry
         ID = int(student_id[0])
-        user_search_text = re.sub(r',\s?\d+\s?', "", user_search_text)
+        user_search_text = re.sub(r",\s?\d+\s?", "", user_search_text)
         course_code = user_search_text.strip().upper()
 
         searching_course_msg = await bot.send_message(
-            user_id, f"🔎 Searching for {course_code}...🚀")
+            user_id, f"🔎 Searching for {course_code}...🚀"
+        )
         searching_course_msg_id = searching_course_msg.message_id
 
         # sending sticker
@@ -139,7 +127,8 @@ async def handle_exam_schedules_search(message: types.Message):
             exams_details = FB.get_saved_exams_details(user_id)
         else:
             await bot.delete_messages(
-                user_id, [sticker_message_id, searching_course_msg_id])
+                user_id, [sticker_message_id, searching_course_msg_id]
+            )
 
             await message.reply(
                 text=f"""<strong>❌ {course_code} not found on UG timetable site</strong>
@@ -147,7 +136,9 @@ Please double-check the course code.\n
 It's possible that <strong>{course_code}</strong> has not yet been uploaded to the site yet. You can try searching for it at a later time.
 
 <i><a href="https://sts.ug.edu.gh/timetable/">Visit UG timetable site 🌍</a></i>
-""", parse_mode=ParseMode.HTML)
+""",
+                parse_mode=ParseMode.HTML,
+            )
 
             return
 
@@ -167,7 +158,8 @@ It's possible that <strong>{course_code}</strong> has not yet been uploaded to t
 </blockquote>
 """)
             await bot.delete_messages(
-                user_id, [sticker_message_id, searching_course_msg_id])
+                user_id, [sticker_message_id, searching_course_msg_id]
+            )
             await message.reply(f"Found {len(exams_details)} venue(s)📍 for ID {ID} ")
             for text in formatted_data:
                 await message.answer(text, parse_mode=ParseMode.HTML)
@@ -175,7 +167,7 @@ It's possible that <strong>{course_code}</strong> has not yet been uploaded to t
         elif not found_exact_venue and exams_details:
             for _, info in exams_details.items():
                 all_exams_venues = info.get("All_Exams_Venues")
-                all_exams_venues_str = '\n📍 '.join(all_exams_venues)
+                all_exams_venues_str = "\n📍 ".join(all_exams_venues)
 
                 formatted_data.append(f"""
 <a href="{info.get("Link")}">{"📝"}{info.get("Full_Course_Name")}</a>
@@ -189,8 +181,11 @@ It's possible that <strong>{course_code}</strong> has not yet been uploaded to t
 </blockquote>
 """)
             await bot.delete_messages(
-                user_id, [sticker_message_id, searching_course_msg_id])
-            await message.reply(f"❗No exact venue found for ID - {ID}! ❗\n\nHowever, I've discovered {len(exams_details)} exam schedule(s) for {course_code}.")
+                user_id, [sticker_message_id, searching_course_msg_id]
+            )
+            await message.reply(
+                f"❗No exact venue found for ID - {ID}! ❗\n\nHowever, I've discovered {len(exams_details)} exam schedule(s) for {course_code}."
+            )
             for text in formatted_data:
                 await message.answer(text, parse_mode=ParseMode.HTML)
 
@@ -201,18 +196,20 @@ It's possible that <strong>{course_code}</strong> has not yet been uploaded to t
         error_msg = str(e)
         msg = "⚠️ An error occurred ⚠️."
         await bot.delete_messages(
-            user_id, [sticker_message_id, searching_course_msg_id])
-        await message.reply(
-            user_id, msg)
-        if DEVELOPER_CHAT_ID:
-            await bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=f"An error occured: \n{error_msg}")
+            user_id, [sticker_message_id, searching_course_msg_id]
+        )
+        await message.reply(user_id, msg)
+        if AppConfig.DEVELOPER_CHAT_ID:
+            await bot.send_message(
+                chat_id=AppConfig.DEVELOPER_CHAT_ID,
+                text=f"An error occured: \n{error_msg}",
+            )
         raise
 
 
 def calendar_button():
     builder = InlineKeyboardBuilder()
-    builder.button(
-        text="Create a remmider ⏰", callback_data='get_calendar')
+    builder.button(text="Create a reminder ⏰", callback_data="get_calendar")
 
     return builder.as_markup()
 
@@ -220,8 +217,12 @@ def calendar_button():
 def alarm_offset_button():
     """Inline keyboard with alarm offset options."""
     keyboard = InlineKeyboardBuilder()
-    offset_options = [("30 min", "30"), ("1 hr", "60"), ("2 hr",
-                                                         "120"), ("4 hr", "240")]
+    offset_options = [
+        ("30 min", "30"),
+        ("1 hr", "60"),
+        ("2 hr", "120"),
+        ("4 hr", "240"),
+    ]
     for text, callback_data in offset_options:
         keyboard.button(text=text, callback_data=callback_data)
     return keyboard.as_markup()
@@ -229,15 +230,16 @@ def alarm_offset_button():
 
 @router.callback_query(lambda c: c.data == "get_calendar")
 async def handle_buttoms(call: types.callback_query):
-
-    await call.message.edit_reply_markup(text=f"{Message}\nPlease pick a time delay for the calender", reply_markup=alarm_offset_button())
+    await call.message.edit_reply_markup(
+        text=f"{Message}\nPlease pick a time delay for the calender",
+        reply_markup=alarm_offset_button(),
+    )
 
     await call.answer("Please pick a time delay for the calender")
 
 
 @router.callback_query(lambda c: c.data in ["30", "60", "120", "240"])
 async def handle_buttoms(call: types.callback_query):
-
     alarm_offset = call.data
 
     if alarm_offset == "30":
@@ -266,7 +268,7 @@ async def get_chat_id(message: types.Message):
     return chat_id
 
 
-@router.message(lambda message: message.text.lower() == 'up?')
+@router.message(lambda message: message.text.lower() == "up?")
 async def handle_are_you_up(message: types.Message):
     response = "Who needs sleep when you’re a bot? I’m here and ready to assist! 🌞"
     await message.reply(response)
@@ -281,23 +283,26 @@ Pleae ensure course code has 4 letters and 3 numbers 📚
 ID should be at least 8 numbers 🔢
 Separate with a comma, like: ugrc210, 10921287.
 \nLet's try that again 🔄.
-""")
+"""
+    )
 
 
 async def on_startup(bot: Bot) -> None:
     try:
         # Delete and set webhook
         await bot.delete_webhook(drop_pending_updates=False)
-        await bot.set_webhook(f"{BASE_WEBHOOK_URL}")
+        await bot.set_webhook(f"{AppConfig.BASE_WEBHOOK_URL}")
 
     except exceptions.TelegramRetryAfter as e:
         # if too many request at a time sleep and try again
         await asyncio.sleep(e.timeout)
-        await bot.set_webhook(f"{BASE_WEBHOOK_URL}")
+        await bot.set_webhook(f"{AppConfig.BASE_WEBHOOK_URL}")
+    except BaseException as e:
+        logger.exception("Application startup failed", exc_info=True)
 
 
 def main() -> None:
-    """Inialised dispatcher and webhook"""
+    """Initialise dispatcher and webhook"""
     dp = Dispatcher()
     dp.include_router(router)
     dp.startup.register(on_startup)
@@ -309,8 +314,11 @@ def main() -> None:
 
     webhook_requests_handler.register(app, path="/")
     setup_application(app, dp, bot=bot)
-    logger.info(f"WEBHOOK_URL--{BASE_WEBHOOK_URL}")
-    web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
+    logger.info(f"WEBHOOK_URL--{AppConfig.BASE_WEBHOOK_URL}")
+    web.run_app(
+        app, host=AppConfig.WEB_SERVER_HOST, port=int(AppConfig.WEB_SERVER_PORT)
+    )
+    logger.info("✅ Application startup complete")
 
 
 if __name__ == "__main__":
