@@ -1,0 +1,1 @@
+web: python src/utils/create_firebase_auth.py && python src/main.py
