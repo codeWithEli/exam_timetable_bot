@@ -6,7 +6,6 @@ import time
 import traceback
 from typing import Dict, Generator, List, Union
 
-import dotenv
 import requests
 
 
@@ -26,7 +25,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 
-
+from config import AppConfig
 from utils.path_separator import get_file_separator
 
 # Logging setup
@@ -38,10 +37,8 @@ file_logger = logging.getLogger("fileLogger")
 
 
 # Constants
-dotenv.load_dotenv()
-URL = os.environ.get("URL")
-USERNAME = os.environ.get("USER_NAME")
-PASSWORD = os.environ.get("PASSWORD")
+USERNAME = ""
+PASSWORD = ""
 
 
 class PascoScraper:
@@ -55,8 +52,17 @@ class PascoScraper:
             os.getcwd() + get_file_separator() + "src" + get_file_separator() + "tmp"
         )
         self.CURRENT_UUID = "CURRENT_UUID"
-        s = Service(ChromeDriverManager().install())
+        # set chrome path
+        chrome_path = "/opt/google/chrome/chrome"
+        chrome_driver_path = "/usr/bin/chromedriver"
+
+        # set service executable path to use pre-installed chrome
+        service = Service(executable_path=chrome_driver_path)
+
+        # set chrome binary location
         options = webdriver.ChromeOptions()
+        options.binary_location = chrome_path
+
         # Open externally not with chrome's pdf viewer
         self.PROFILE = {
             "plugins.plugins_list": [{"enabled": False, "name": "Chrome PDF Viewer"}],
@@ -72,12 +78,12 @@ class PascoScraper:
         # self.driver = webdriver.Chrome(
         #     executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=options
         # )
-        self.driver = webdriver.Chrome(service=s, options=options)
+        self.driver = webdriver.Chrome(service=service, options=options)
         self.driver.implicitly_wait(6)
 
         # Log in
         try:
-            self.driver.get(URL)
+            self.driver.get(AppConfig.URL)
 
             username_field = self.driver.find_element(By.NAME, "memberID")
             password_field = self.driver.find_element(By.NAME, "memberPassWord")
@@ -210,7 +216,7 @@ class PascoScraper:
         updated_list = []
         for value in range(len(list_of_values)):
             updated_list.append(
-                f"{value+1}. " + re.sub("\n", ", ", list_of_values[value])
+                f"{value + 1}. " + re.sub("\n", ", ", list_of_values[value])
             )
             updated_list.append("")
 
@@ -265,7 +271,7 @@ class PascoScraper:
         Returns:
           The path to the past_question_file
         """
-        
+
         if int(choice) == -1:
             for past_question_link in past_question_links.values():
                 self.driver.get(past_question_link)
@@ -275,9 +281,7 @@ class PascoScraper:
         else:
             for index, past_question_link in past_question_links.items():
                 if int(choice) == index:
-                    self.driver.get(
-                        past_question_link
-                    )  
+                    self.driver.get(past_question_link)
                     logger.info(f"Moved to {past_question_link} successfully.")
 
                     self.download_past_question()

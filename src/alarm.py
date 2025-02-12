@@ -1,21 +1,13 @@
-import logging
 import firebase_functions as FB
 from ics import Calendar, Event, DisplayAlarm
 from datetime import datetime, timedelta
 import warnings
-
+from utils import logger
 
 warnings.simplefilter("ignore", FutureWarning)
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-
-logger = logging.getLogger(__name__)
-
 
 def create_alarm_file(user_id: str, alarm_offset_minutes: int) -> str:
-
     try:
         all_exams_details = FB.get_saved_exams_details(user_id)
 
@@ -25,9 +17,13 @@ def create_alarm_file(user_id: str, alarm_offset_minutes: int) -> str:
             # Create event
             event = Event()
             event.name = course_info.get("Full_Course_Name")
-            event.description = f"ALL EXAMS VENUES: {course_info.get('All_Exams_Venue')}"
+            event.description = (
+                f"ALL EXAMS VENUES: {course_info.get('All_Exams_Venue')}"
+            )
             event.begin = datetime.strptime(
-                f"{course_info.get('Exams_Date')} {course_info.get('Exams_Time')}", "%B %d, %Y %I:%M %p")
+                f"{course_info.get('Exams_Date')} {course_info.get('Exams_Time')}",
+                "%B %d, %Y %I:%M %p",
+            )
 
             # Construct display text and venue
 
@@ -65,7 +61,8 @@ def create_alarm_file(user_id: str, alarm_offset_minutes: int) -> str:
 
     except Exception as e:
         logger.info(
-            f"An error occurred while creating ALARM file for {course_name}: {e}")
+            f"An error occurred while creating ALARM file for {course_name}: {e}"
+        )
         return None
 
 

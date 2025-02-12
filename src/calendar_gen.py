@@ -1,15 +1,8 @@
 import random
-import logging
 from ics import Calendar, Event, DisplayAlarm
 from datetime import datetime, timedelta
 from firebase_functions import get_saved_exams_details
-
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-
-logger = logging.getLogger(__name__)
+from utils import logger
 
 
 def create_alarm_file(user_id: str, alarm_offset_minutes: int) -> str:
@@ -18,14 +11,15 @@ def create_alarm_file(user_id: str, alarm_offset_minutes: int) -> str:
     cal = Calendar()
 
     try:
-
         for course_name, course_info in all_exams_details.items():
             # Create event
             event = Event()
             event.name = course_info["Full_Course_Name"]
             event.description = f"ALL EXAMS VENUES: {course_info['All_Exams_Venue']}"
             event.begin = datetime.strptime(
-                f"{course_info['Exams_Date']} {course_info['Exams_Time']}", "%B %d, %Y %I:%M %p")
+                f"{course_info['Exams_Date']} {course_info['Exams_Time']}",
+                "%B %d, %Y %I:%M %p",
+            )
 
             # Construct display text and venue
             display_text = f"{course_info['Full_Course_Name']}"
@@ -36,7 +30,6 @@ def create_alarm_file(user_id: str, alarm_offset_minutes: int) -> str:
                 Venue = f"{', '.join(course_info['All_Exams_Venue'])}"
 
             event.location = Venue
-            
 
             # Add alarm
             alarm = DisplayAlarm()
@@ -58,8 +51,7 @@ def create_alarm_file(user_id: str, alarm_offset_minutes: int) -> str:
         return filename
 
     except Exception as e:
-        logger.info(
-            f"An error occurred while processing {course_name}: {e}")
+        logger.info(f"An error occurred while processing {course_name}: {e}")
         return None
 
 
